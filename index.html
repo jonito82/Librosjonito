@@ -75,7 +75,23 @@
   .btn-danger{background:#fff1f0;color:var(--red)}
   @media(prefers-color-scheme:dark){.btn-danger{background:#2c1f1f;color:var(--red)}}
 
-  /* ── EMPTY STATE ── */
+  .inicio-cover{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:8px;background:var(--surface2);display:block}
+  .inicio-cover-ph{width:100%;aspect-ratio:2/3;border-radius:8px;background:linear-gradient(135deg,var(--accent),#5856d6);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
+
+  /* ── DRILL-DOWN MODAL ── */
+  .drill-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end}
+  .drill-sheet{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-height:80vh;display:flex;flex-direction:column}
+  .drill-header{padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+  .drill-title{font-size:17px;font-weight:700}
+  .drill-body{overflow-y:auto;padding:12px 16px 32px;-webkit-overflow-scrolling:touch}
+  .drill-book-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer}
+  .drill-book-item:last-child{border-bottom:none}
+  .drill-cover{width:36px;height:54px;object-fit:cover;border-radius:5px;background:var(--surface2);flex-shrink:0}
+  .drill-cover-ph{width:36px;height:54px;border-radius:5px;background:linear-gradient(135deg,var(--accent),#5856d6);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+  .drill-info{flex:1;min-width:0}
+  .drill-book-title{font-size:14px;font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3}
+  .drill-book-author{font-size:12px;color:var(--text2);margin-top:2px}
+  .drill-book-year{font-size:11px;color:var(--text3);margin-top:1px}
   .empty{text-align:center;padding:60px 20px;color:var(--text2)}
   .empty-icon{font-size:48px;margin-bottom:12px}
   .empty h2{font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px}
@@ -347,7 +363,15 @@ function coverPH(letter,w,h){
   d.style.cssText=`width:${w}px;height:${h}px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),#5856d6);display:flex;align-items:center;justify-content:center;font-size:${Math.round(h*.22)}px;font-weight:700;color:#fff;flex-shrink:0`;
   d.textContent=letter; return d;
 }
-function iniLetter(s){ return (s||'?')[0].toUpperCase() }
+function coverImg(b, w, h, cls){
+  const style = (w&&h) ? `width:${w}px;height:${h}px` : '';
+  const phCls = cls==='inicio-cover' ? 'inicio-cover-ph' : (cls==='drill-cover'?'drill-cover-ph':'book-cover-placeholder');
+  const letter = escHtml(iniLetter(b.titulo));
+  if(b.portadaUrl){
+    return `<img src="${escHtml(b.portadaUrl)}" class="${cls}" style="${style}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="${phCls}" style="${style};display:none">${letter}</div>`;
+  }
+  return `<div class="${phCls}" style="${style}">${letter}</div>`;
+}
 function starsStr(n){ return '★'.repeat(n||0)+'☆'.repeat(5-(n||0)) }
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 function fmtDate(d){ if(!d)return'—'; const dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}) }
@@ -358,13 +382,33 @@ function daysBetween(a,b){ if(!a||!b)return null; return Math.round((new Date(b)
 // ══════════════════════════════════════
 function renderInicio(){
   const books = loadBooks();
-  const leyendo = books.filter(b=>b.estado==='leyendo');
+  const leyendo   = books.filter(b=>b.estado==='leyendo');
+  const leidos    = books.filter(b=>b.estado==='leido');
+  const estant    = books.filter(b=>b.estado==='estanteria');
+  const thisYear  = new Date().getFullYear();
+  const thisYearN = leidos.filter(b=>(b.fechaFin||'').startsWith(thisYear)).length;
+  const recientes = [...leidos].sort((a,b)=>(b.fechaFin||'').localeCompare(a.fechaFin||'')).slice(0,6);
   const el = document.getElementById('tab-inicio');
-  if(!leyendo.length){
-    el.innerHTML=`<div class="empty"><div class="empty-icon">📖</div><h2>Sin lecturas activas</h2><p>Añade un libro y empieza a leer.</p></div>`;
-    return;
-  }
-  el.innerHTML = leyendo.map(b=>`
+
+  el.innerHTML = `
+    <!-- KPIs -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="card" style="padding:14px;text-align:center">
+        <div style="font-size:26px;font-weight:700;color:var(--accent)">${leidos.length}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">Leídos</div>
+      </div>
+      <div class="card" style="padding:14px;text-align:center">
+        <div style="font-size:26px;font-weight:700;color:var(--green)">${thisYearN}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">Este año</div>
+      </div>
+      <div class="card" style="padding:14px;text-align:center">
+        <div style="font-size:26px;font-weight:700;color:var(--orange)">${estant.length}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">Pendientes</div>
+      </div>
+    </div>
+
+    <!-- Leyendo ahora -->
+    ${leyendo.length ? leyendo.map(b=>`
     <div class="card" style="margin-bottom:12px">
       <div class="book-current">
         <div class="book-cover-wrap">
@@ -382,9 +426,28 @@ function renderInicio(){
           </div>
         </div>
       </div>
-      ${b.notas?`<div style="padding:0 16px 14px;font-size:13px;color:var(--text2);line-height:1.5">${escHtml(b.notas)}</div>`:''}
-    </div>
-  `).join('');
+    </div>`).join('') : `<div class="card" style="padding:16px 18px;margin-bottom:12px;display:flex;align-items:center;gap:12px;color:var(--text2)">
+      <span style="font-size:24px">📖</span>
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text)">Sin lecturas activas</div>
+        <div style="font-size:12px;margin-top:2px">Pulsa + para añadir un libro</div>
+      </div>
+    </div>`}
+
+    <!-- Últimas lecturas -->
+    ${recientes.length ? `
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin:4px 4px 10px">Últimas lecturas</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
+      ${recientes.map(b=>`
+      <div onclick="openDetail('${b.id}')" style="cursor:pointer">
+        <div style="position:relative">
+          ${coverImg(b,null,null,'inicio-cover')}
+        </div>
+        <div style="font-size:11px;font-weight:500;margin-top:5px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3">${escHtml(b.titulo)}</div>
+        ${b.puntuacion?`<div style="font-size:10px;color:var(--yellow);margin-top:1px">${'★'.repeat(b.puntuacion)}</div>`:''}
+      </div>`).join('')}
+    </div>` : ''}
+  `;
 }
 
 // ══════════════════════════════════════
@@ -552,19 +615,23 @@ function renderStats(){
 
     ${decadeKeys.length?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:12px">Por década</div>${decadeKeys.map(d=>{
       const pct=Math.round(byDecade[d]/all.length*100);
-      return `<div style="margin-bottom:10px">
-        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="font-weight:500">${d}s</span><span style="color:var(--text2)">${byDecade[d]} libro${byDecade[d]>1?'s':''} · ${pct}%</span></div>
-        <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--accent);border-radius:3px;transition:width .4s"></div></div>
+      const booksInDecade=all.filter(b=>b.anoPublicacion&&Math.floor(b.anoPublicacion/10)*10==d);
+      return `<div style="margin-bottom:10px;cursor:pointer" onclick='openDrill("Década ${d}s",${JSON.stringify(booksInDecade)})'>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="font-weight:500">${d}s</span><span style="color:var(--accent)">${byDecade[d]} libro${byDecade[d]>1?'s':''} · ${pct}% ›</span></div>
+        <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--accent);border-radius:3px"></div></div>
       </div>`;
     }).join('')}</div>`:''}
 
-    ${topAuthors.length>1?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:8px">Top autores</div>${topAuthors.map(([n,c])=>`<div class="rank-item"><span class="rank-name">${escHtml(n)}</span><span class="rank-count">${c} libro${c>1?'s':''}</span></div>`).join('')}</div>`:''}
+    ${topAuthors.length>1?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:8px">Top autores</div>${topAuthors.map(([n,c])=>{
+      const ba=all.filter(b=>b.autor===n);
+      return `<div class="rank-item" style="cursor:pointer" onclick='openDrill(${JSON.stringify(n)},${JSON.stringify(ba)})'><span class="rank-name">${escHtml(n)}</span><span class="rank-count" style="color:var(--accent)">${c} libro${c>1?'s':''} ›</span></div>`;
+    }).join('')}</div>`:''}
 
     ${topGenres.length?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:8px">Géneros</div>${topGenres.map(([n,c])=>{
       const pct=Math.round(c/all.length*100);
-      return `<div class="rank-item"><span class="rank-name">${escHtml(n)}</span><span style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--text3);min-width:24px;text-align:right">${pct}%</span><span class="rank-count">${c}</span></span></div>`;
+      const bg=all.filter(b=>b.genero===n);
+      return `<div class="rank-item" style="cursor:pointer" onclick='openDrill(${JSON.stringify(n)},${JSON.stringify(bg)})'><span class="rank-name">${escHtml(n)}</span><span style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--text3)">${pct}%</span><span class="rank-count" style="color:var(--accent)">${c} ›</span></span></div>`;
     }).join('')}</div>`:''}
-  `;
 
   requestAnimationFrame(()=>{
     const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
@@ -708,7 +775,40 @@ function abandonBook(id){
 }
 
 // ══════════════════════════════════════
-//  ADD BOOK FLOW
+//  DRILL-DOWN
+// ══════════════════════════════════════
+function openDrill(title, books){
+  const sorted = [...books].sort((a,b)=>(b.fechaFin||'').localeCompare(a.fechaFin||''));
+  const html = `
+    <div class="drill-overlay" id="drillOverlay" onclick="e=>{if(e.target.id==='drillOverlay')closeDrill()}">
+      <div class="drill-sheet">
+        <div class="drill-header">
+          <div class="drill-title">${escHtml(title)} <span style="color:var(--text3);font-weight:400;font-size:14px">(${sorted.length})</span></div>
+          <button class="icon-btn" onclick="closeDrill()">✕</button>
+        </div>
+        <div class="drill-body">
+          ${sorted.map(b=>`
+          <div class="drill-book-item" onclick="closeDrill();setTimeout(()=>openDetail('${b.id}'),200)">
+            ${b.portadaUrl
+              ? `<img src="${escHtml(b.portadaUrl)}" class="drill-cover" onerror="this.outerHTML='<div class=\\'drill-cover-ph\\'>${escHtml(iniLetter(b.titulo))}</div>'" alt="">`
+              : `<div class="drill-cover-ph">${escHtml(iniLetter(b.titulo))}</div>`}
+            <div class="drill-info">
+              <div class="drill-book-title">${escHtml(b.titulo)}</div>
+              <div class="drill-book-author">${escHtml(b.autor||'')}</div>
+              <div class="drill-book-year">${b.anoPublicacion?b.anoPublicacion+' · ':''}${b.puntuacion?'★'.repeat(b.puntuacion):''}${b.fechaFin?' · '+fmtDate(b.fechaFin):''}</div>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.getElementById('drillOverlay').addEventListener('click', e=>{
+    if(e.target.id==='drillOverlay') closeDrill();
+  });
+}
+function closeDrill(){
+  document.getElementById('drillOverlay')?.remove();
+}
 // ══════════════════════════════════════
 document.getElementById('fabBtn').addEventListener('click',()=>openAddFlow());
 
