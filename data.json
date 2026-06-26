@@ -12,7 +12,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-06-24"
+    "addedAt": "2026-06-24",
+    "anoPublicacion": 2025
   },
   {
     "id": "m9k2x2b",
@@ -27,7 +28,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-06-21"
+    "addedAt": "2026-06-21",
+    "anoPublicacion": 2023
   },
   {
     "id": "m9k2x3c",
@@ -42,7 +44,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-06-14"
+    "addedAt": "2026-06-14",
+    "anoPublicacion": 2019
   },
   {
     "id": "m9k2x4d",
@@ -57,7 +60,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-06-13"
+    "addedAt": "2026-06-13",
+    "anoPublicacion": 2018
   },
   {
     "id": "m9k2x5e",
@@ -72,7 +76,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-06-12"
+    "addedAt": "2026-06-12",
+    "anoPublicacion": 2022
   },
   {
     "id": "m9k2x6f",
@@ -87,7 +92,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-06-08"
+    "addedAt": "2026-06-08",
+    "anoPublicacion": 2025
   },
   {
     "id": "h7j3k1a",
@@ -102,7 +108,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-05-18"
+    "addedAt": "2026-05-18",
+    "anoPublicacion": 2015
   },
   {
     "id": "h7j3k2b",
@@ -117,7 +124,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-04-02"
+    "addedAt": "2026-04-02",
+    "anoPublicacion": 1995
   },
   {
     "id": "h7j3k3c",
@@ -132,7 +140,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-03-01"
+    "addedAt": "2026-03-01",
+    "anoPublicacion": 2024
   },
   {
     "id": "h7j3k4d",
@@ -147,7 +156,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-03-17"
+    "addedAt": "2026-03-17",
+    "anoPublicacion": 2022
   },
   {
     "id": "h7j3k5e",
@@ -162,7 +172,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-03-01"
+    "addedAt": "2026-03-01",
+    "anoPublicacion": 2022
   },
   {
     "id": "h7j3k6f",
@@ -177,7 +188,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-01-11"
+    "addedAt": "2026-01-11",
+    "anoPublicacion": 2022
   },
   {
     "id": "h7j3k7g",
@@ -192,7 +204,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-01-06"
+    "addedAt": "2026-01-06",
+    "anoPublicacion": 2024
   },
   {
     "id": "h7j3k8h",
@@ -207,7 +220,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-01-02"
+    "addedAt": "2026-01-02",
+    "anoPublicacion": 2023
   },
   {
     "id": "h7j3k9i",
@@ -222,7 +236,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-01-01"
+    "addedAt": "2026-01-01",
+    "anoPublicacion": 2022
   },
   {
     "id": "h7j3k0j",
@@ -237,7 +252,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-12-23"
+    "addedAt": "2025-12-23",
+    "anoPublicacion": 1999
   },
   {
     "id": "h7j3kak",
@@ -252,7 +268,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-11-25"
+    "addedAt": "2025-11-25",
+    "anoPublicacion": 2019
   },
   {
     "id": "h7j3kbl",
@@ -267,7 +284,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-10-30"
+    "addedAt": "2025-10-30",
+    "anoPublicacion": 2024
   },
   {
     "id": "h7j3kcm",
@@ -282,7 +300,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-11-21"
+    "addedAt": "2025-11-21",
+    "anoPublicacion": 2006
   },
   {
     "id": "h7j3kdn",
@@ -297,7 +316,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-11-03"
+    "addedAt": "2025-11-03",
+    "anoPublicacion": 2025
   },
   {
     "id": "h7j3keo",
@@ -312,7 +332,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-10-12"
+    "addedAt": "2025-10-12",
+    "anoPublicacion": 2024
   },
   {
     "id": "h7j3kfp",
@@ -327,7 +348,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-09-06"
+    "addedAt": "2025-09-06",
+    "anoPublicacion": 2020
   },
   {
     "id": "h7j3kgq",
@@ -342,7 +364,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-08-31"
+    "addedAt": "2025-08-31",
+    "anoPublicacion": 1993
   },
   {
     "id": "h7j3khr",
@@ -357,7 +380,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-08-25"
+    "addedAt": "2025-08-25",
+    "anoPublicacion": 2012
   },
   {
     "id": "h7j3kis",
@@ -372,7 +396,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-08-23"
+    "addedAt": "2025-08-23",
+    "anoPublicacion": 1999
   },
   {
     "id": "h7j3kjt",
@@ -387,7 +412,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-08-17"
+    "addedAt": "2025-08-17",
+    "anoPublicacion": 1989
   },
   {
     "id": "h7j3kku",
@@ -402,7 +428,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-07-27"
+    "addedAt": "2025-07-27",
+    "anoPublicacion": 1999
   },
   {
     "id": "h7j3klv",
@@ -417,7 +444,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-07-22"
+    "addedAt": "2025-07-22",
+    "anoPublicacion": 2020
   },
   {
     "id": "h7j3kmw",
@@ -432,7 +460,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-08-14"
+    "addedAt": "2025-08-14",
+    "anoPublicacion": 2012
   },
   {
     "id": "h7j3knx",
@@ -447,7 +476,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-08-01"
+    "addedAt": "2025-08-01",
+    "anoPublicacion": 2021
   },
   {
     "id": "h7j3kox",
@@ -462,7 +492,8 @@
     "estado": "leido",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2025-05-21"
+    "addedAt": "2025-05-21",
+    "anoPublicacion": 2012
   },
   {
     "id": "p1q2r3s4",
@@ -477,7 +508,8 @@
     "estado": "leyendo",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-06-26"
+    "addedAt": "2026-06-26",
+    "anoPublicacion": 2018
   },
   {
     "id": "p1q2r3s5",
@@ -492,7 +524,8 @@
     "estado": "leyendo",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-06-26"
+    "addedAt": "2026-06-26",
+    "anoPublicacion": 1996
   },
   {
     "id": "p1q2r3s6",
@@ -507,7 +540,8 @@
     "estado": "estanteria",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-06-26"
+    "addedAt": "2026-06-26",
+    "anoPublicacion": 2014
   },
   {
     "id": "p1q2r3s7",
@@ -522,6 +556,7 @@
     "estado": "estanteria",
     "notas": null,
     "portadaUrl": null,
-    "addedAt": "2026-06-26"
+    "addedAt": "2026-06-26",
+    "anoPublicacion": 2012
   }
 ]

@@ -482,16 +482,15 @@ function renderStats(){
   const thisYearBooks = all.filter(b=>(b.fechaFin||'').startsWith(thisYear));
   const totalPages = all.reduce((s,b)=>s+(b.paginas||0),0);
   const avgPages = all.length ? Math.round(totalPages/all.length) : 0;
-  const maxPageBook = all.reduce((mx,b)=>(b.paginas||0)>(mx.paginas||0)?b:mx, all[0]);
+  const withPages = all.filter(b=>b.paginas);
+  const maxPageBook = withPages.length ? withPages.reduce((mx,b)=>b.paginas>mx.paginas?b:mx, withPages[0]) : null;
 
-  // Mejor mes (más libros terminados)
+  // Mejor mes
   const byMonth={};
   all.forEach(b=>{ if(b.fechaFin){ const ym=b.fechaFin.slice(0,7); byMonth[ym]=(byMonth[ym]||0)+1 } });
   const bestMonthEntry = Object.entries(byMonth).sort((a,b)=>b[1]-a[1])[0];
   const bestMonthCount = bestMonthEntry ? bestMonthEntry[1] : 0;
   const bestMonthLabel = bestMonthEntry ? (()=>{ const [y,m]=bestMonthEntry[0].split('-'); return new Date(y,m-1).toLocaleDateString('es-ES',{month:'short',year:'numeric'}) })() : '—';
-
-  // Mes actual
   const nowYM = new Date().toISOString().slice(0,7);
   const thisMonthCount = byMonth[nowYM]||0;
 
@@ -502,17 +501,29 @@ function renderStats(){
   // Autores
   const authorMap={};
   all.forEach(b=>{ const a=b.autor||'Desconocido'; authorMap[a]=(authorMap[a]||0)+1 });
-  const topAuthors = Object.entries(authorMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topAuthors = Object.entries(authorMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const topAuthor = topAuthors[0];
 
   // Géneros
   const genreMap={};
   all.forEach(b=>{ if(b.genero){ genreMap[b.genero]=(genreMap[b.genero]||0)+1 } });
-  const topGenres = Object.entries(genreMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topGenres = Object.entries(genreMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const topGenre = topGenres[0];
 
-  // Por año
-  const byYear={};
-  all.forEach(b=>{ const y=(b.fechaFin||'').slice(0,4); if(y) byYear[y]=(byYear[y]||0)+1 });
-  const yearKeys = Object.keys(byYear).sort();
+  // Por año de lectura (fechaFin)
+  const byReadYear={};
+  all.forEach(b=>{ const y=(b.fechaFin||'').slice(0,4); if(y) byReadYear[y]=(byReadYear[y]||0)+1 });
+  const readYearKeys = Object.keys(byReadYear).sort();
+
+  // Por año de publicación
+  const byPubYear={};
+  all.forEach(b=>{ if(b.anoPublicacion){ byPubYear[b.anoPublicacion]=(byPubYear[b.anoPublicacion]||0)+1 } });
+  const pubYearKeys = Object.keys(byPubYear).sort();
+
+  // Por década de publicación
+  const byDecade={};
+  all.forEach(b=>{ if(b.anoPublicacion){ const d=Math.floor(b.anoPublicacion/10)*10; byDecade[d]=(byDecade[d]||0)+1 } });
+  const decadeKeys = Object.keys(byDecade).sort();
 
   // Páginas por mes (últimos 12)
   const pagesByMonth={};
@@ -525,22 +536,36 @@ function renderStats(){
       <div class="stat-card"><div class="stat-label">Este año (${thisYear})</div><div class="stat-value">${thisYearBooks.length}</div></div>
       <div class="stat-card"><div class="stat-label">Total páginas</div><div class="stat-value">${totalPages.toLocaleString('es')}</div></div>
       <div class="stat-card"><div class="stat-label">Media pág./libro</div><div class="stat-value">${avgPages}</div></div>
-      <div class="stat-card full"><div class="stat-label">Libro más largo</div><div class="stat-value" style="font-size:18px">${escHtml(maxPageBook.titulo)}</div><div class="stat-sub">${maxPageBook.paginas||'?'} páginas</div></div>
       <div class="stat-card"><div class="stat-label">Mejor mes</div><div class="stat-value">${bestMonthCount}</div><div class="stat-sub">${bestMonthLabel}</div></div>
       <div class="stat-card"><div class="stat-label">Este mes</div><div class="stat-value">${thisMonthCount}</div><div class="stat-sub">libros terminados</div></div>
       <div class="stat-card"><div class="stat-label">Tiempo medio</div><div class="stat-value">${avgDays!==null?avgDays:'—'}</div><div class="stat-sub">días/libro</div></div>
+      ${maxPageBook?`<div class="stat-card full"><div class="stat-label">Libro más largo</div><div class="stat-value" style="font-size:16px;line-height:1.3">${escHtml(maxPageBook.titulo)}</div><div class="stat-sub">${maxPageBook.paginas} páginas</div></div>`:''}
+      ${topAuthor?`<div class="stat-card full"><div class="stat-label">Autor más leído</div><div class="stat-value" style="font-size:20px">${escHtml(topAuthor[0])}</div><div class="stat-sub">${topAuthor[1]} libro${topAuthor[1]>1?'s':''}</div></div>`:''}
+      ${topGenre?`<div class="stat-card full"><div class="stat-label">Género más leído</div><div class="stat-value" style="font-size:20px">${escHtml(topGenre[0])}</div><div class="stat-sub">${topGenre[1]} libro${topGenre[1]>1?'s':''}</div></div>`:''}
     </div>
 
-    ${yearKeys.length>1?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:12px">Libros por año</div><div class="chart-wrap"><canvas id="chartYear"></canvas></div></div>`:''}
+    ${readYearKeys.length>1?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:12px">Libros leídos por año</div><div class="chart-wrap"><canvas id="chartYear"></canvas></div></div>`:''}
 
-    ${monthKeys.length?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:12px">Páginas por mes</div><div class="chart-wrap"><canvas id="chartPages"></canvas></div></div>`:''}
+    ${monthKeys.length?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:12px">Páginas leídas por mes</div><div class="chart-wrap"><canvas id="chartPages"></canvas></div></div>`:''}
 
-    ${topAuthors.length?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:8px">Top autores</div>${topAuthors.map(([n,c])=>`<div class="rank-item"><span class="rank-name">${escHtml(n)}</span><span class="rank-count">${c} libro${c>1?'s':''}</span></div>`).join('')}</div>`:''}
+    ${pubYearKeys.length?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:12px">Año de publicación</div><div class="chart-wrap" style="height:160px"><canvas id="chartPubYear"></canvas></div></div>`:''}
 
-    ${topGenres.length?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:8px">Géneros</div>${topGenres.map(([n,c])=>`<div class="rank-item"><span class="rank-name">${escHtml(n)}</span><span class="rank-count">${c}</span></div>`).join('')}</div>`:''}
+    ${decadeKeys.length?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:12px">Por década</div>${decadeKeys.map(d=>{
+      const pct=Math.round(byDecade[d]/all.length*100);
+      return `<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="font-weight:500">${d}s</span><span style="color:var(--text2)">${byDecade[d]} libro${byDecade[d]>1?'s':''} · ${pct}%</span></div>
+        <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--accent);border-radius:3px;transition:width .4s"></div></div>
+      </div>`;
+    }).join('')}</div>`:''}
+
+    ${topAuthors.length>1?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:8px">Top autores</div>${topAuthors.map(([n,c])=>`<div class="rank-item"><span class="rank-name">${escHtml(n)}</span><span class="rank-count">${c} libro${c>1?'s':''}</span></div>`).join('')}</div>`:''}
+
+    ${topGenres.length?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:8px">Géneros</div>${topGenres.map(([n,c])=>{
+      const pct=Math.round(c/all.length*100);
+      return `<div class="rank-item"><span class="rank-name">${escHtml(n)}</span><span style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--text3);min-width:24px;text-align:right">${pct}%</span><span class="rank-count">${c}</span></span></div>`;
+    }).join('')}</div>`:''}
   `;
 
-  // Render charts after DOM is ready
   requestAnimationFrame(()=>{
     const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
     const gridColor = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.06)';
@@ -550,16 +575,20 @@ function renderStats(){
       plugins:{legend:{display:false}},
       scales:{
         x:{grid:{color:gridColor},ticks:{color:labelColor,font:{size:11}}},
-        y:{grid:{color:gridColor},ticks:{color:labelColor,font:{size:11}},beginAtZero:true}
+        y:{grid:{color:gridColor},ticks:{color:labelColor,font:{size:11}},beginAtZero:true,ticks:{stepSize:1,color:labelColor,font:{size:11}}}
       }
     };
-    if(yearKeys.length>1){
-      const c=new Chart(document.getElementById('chartYear'),{type:'bar',data:{labels:yearKeys,datasets:[{data:yearKeys.map(y=>byYear[y]),backgroundColor:'rgba(0,122,255,.7)',borderRadius:6}]},options:opts});
+    if(readYearKeys.length>1){
+      const c=new Chart(document.getElementById('chartYear'),{type:'bar',data:{labels:readYearKeys,datasets:[{data:readYearKeys.map(y=>byReadYear[y]),backgroundColor:'rgba(0,122,255,.7)',borderRadius:6}]},options:opts});
       statsCharts.push(c);
     }
     if(monthKeys.length){
       const monthLabels=monthKeys.map(m=>{const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleDateString('es-ES',{month:'short',year:'2-digit'})});
       const c=new Chart(document.getElementById('chartPages'),{type:'bar',data:{labels:monthLabels,datasets:[{data:monthKeys.map(m=>pagesByMonth[m]),backgroundColor:'rgba(88,86,214,.7)',borderRadius:6}]},options:opts});
+      statsCharts.push(c);
+    }
+    if(pubYearKeys.length){
+      const c=new Chart(document.getElementById('chartPubYear'),{type:'bar',data:{labels:pubYearKeys,datasets:[{data:pubYearKeys.map(y=>byPubYear[y]),backgroundColor:'rgba(52,199,89,.7)',borderRadius:4}]},options:{...opts,scales:{...opts.scales,x:{...opts.scales.x,ticks:{color:labelColor,font:{size:10},maxRotation:45}}}}});
       statsCharts.push(c);
     }
   });
