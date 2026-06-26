@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Books">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+<title>Books</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#f5f5f5;--surface:#fff;--surface2:#f5f5f5;--border:#e5e5ea;
+    --text:#1c1c1e;--text2:#6e6e73;--text3:#aeaeb2;
+    --accent:#007aff;--accent-soft:#e8f0fe;
+    --green:#34c759;--red:#ff3b30;--orange:#ff9500;--yellow:#ffcc00;
+    --radius:14px;--radius-sm:10px;
+    --nav-h:60px;--nav-pb:env(safe-area-inset-bottom,0px);
+    --shadow:0 2px 12px rgba(0,0,0,.08);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --bg:#1c1c1e;--surface:#2c2c2e;--surface2:#3a3a3c;--border:#38383a;
+      --text:#f5f5f7;--text2:#aeaeb2;--text3:#636366;
+      --accent:#0a84ff;--accent-soft:#1a2a4a;
+      --shadow:0 2px 12px rgba(0,0,0,.3);
+    }
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+  body{overflow:hidden;display:flex;flex-direction:column}
+
+  /* ── HEADER ── */
+  .header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px 12px;padding-top:calc(16px + env(safe-area-inset-top,0px));display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  .header h1{font-size:22px;font-weight:700;letter-spacing:-.4px}
+  .header-actions{display:flex;gap:8px}
+  .icon-btn{background:none;border:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--accent);font-size:18px;transition:background .15s}
+  .icon-btn:hover{background:var(--surface2)}
+
+  /* ── MAIN SCROLL ── */
+  .main{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 16px calc(var(--nav-h) + var(--nav-pb) + 24px);-webkit-overflow-scrolling:touch}
+
+  /* ── BOTTOM NAV ── */
+  .nav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--nav-h) + var(--nav-pb));background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:flex-start;padding-top:6px;z-index:50}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;border:none;background:none;color:var(--text3);font-size:10px;font-weight:500;transition:color .15s}
+  .nav-item.active{color:var(--accent)}
+  .nav-item svg{width:22px;height:22px}
+
+  /* ── CARDS ── */
+  .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .card+.card{margin-top:12px}
+
+  /* ── CURRENT BOOK CARD (Inicio) ── */
+  .book-current{display:flex;gap:14px;padding:16px}
+  .book-cover-wrap{position:relative;flex-shrink:0}
+  .book-cover{width:80px;height:120px;object-fit:cover;border-radius:var(--radius-sm);background:var(--surface2);display:block}
+  .book-cover-placeholder{width:80px;height:120px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),#5856d6);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;flex-shrink:0}
+  .badge{position:absolute;top:6px;left:6px;background:var(--green);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px}
+  .book-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+  .book-title{font-size:16px;font-weight:600;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .book-author{font-size:13px;color:var(--text2)}
+  .book-meta{font-size:12px;color:var(--text3)}
+  .book-actions{display:flex;gap:8px;margin-top:auto;padding-top:4px}
+  .btn{border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;font-family:inherit}
+  .btn:active{opacity:.7}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-ghost{background:var(--surface2);color:var(--text)}
+  .btn-danger{background:#fff1f0;color:var(--red)}
+  @media(prefers-color-scheme:dark){.btn-danger{background:#2c1f1f;color:var(--red)}}
+
+  /* ── EMPTY STATE ── */
+  .empty{text-align:center;padding:60px 20px;color:var(--text2)}
+  .empty-icon{font-size:48px;margin-bottom:12px}
+  .empty h2{font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .empty p{font-size:14px;line-height:1.5}
+
+  /* ── GRID (Leídos) ── */
+  .grid-covers{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px}
+  .cover-item{cursor:pointer;display:flex;flex-direction:column;gap:6px}
+  .cover-item img,.cover-thumb{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:var(--radius-sm);background:var(--surface2);display:block}
+  .cover-thumb-placeholder{width:100%;aspect-ratio:2/3;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),#5856d6);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff}
+  .cover-title{font-size:11px;font-weight:500;color:var(--text);line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .stars-sm{font-size:11px;color:var(--yellow)}
+
+  /* ── LIST (Estantería / Abandonados) ── */
+  .book-list-item{display:flex;gap:12px;padding:14px 16px;align-items:center;cursor:pointer}
+  .book-list-item+.book-list-item{border-top:1px solid var(--border)}
+  .list-cover{width:44px;height:66px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--surface2)}
+  .list-cover-ph{width:44px;height:66px;border-radius:6px;flex-shrink:0;background:linear-gradient(135deg,var(--accent),#5856d6);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff}
+  .list-info{flex:1;min-width:0}
+  .list-title{font-size:15px;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .list-author{font-size:13px;color:var(--text2);margin-top:2px}
+  .list-date{font-size:12px;color:var(--text3);margin-top:4px}
+  .list-chevron{color:var(--text3);font-size:16px}
+
+  /* ── STATS ── */
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  .stat-card{background:var(--surface);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+  .stat-card.full{grid-column:1/-1}
+  .stat-label{font-size:12px;color:var(--text2);font-weight:500;margin-bottom:4px}
+  .stat-value{font-size:26px;font-weight:700;letter-spacing:-.5px}
+  .stat-sub{font-size:12px;color:var(--text3);margin-top:2px}
+  .chart-wrap{height:180px;position:relative}
+  .rank-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+  .rank-item:last-child{border:none}
+  .rank-name{font-size:14px;font-weight:500}
+  .rank-count{font-size:14px;color:var(--text2)}
+
+  /* ── FAB ── */
+  .fab{position:fixed;bottom:calc(var(--nav-h) + var(--nav-pb) + 16px);right:20px;width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;font-size:24px;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,122,255,.4);display:flex;align-items:center;justify-content:center;z-index:49;transition:transform .15s}
+  .fab:active{transform:scale(.93)}
+  #tab-stats~.fab-anchor .fab{display:none}
+
+  /* ── BACKDROP ── */
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;opacity:0;pointer-events:none;transition:opacity .25s}
+  .backdrop.show{opacity:1;pointer-events:auto}
+
+  /* ── BOTTOM SHEET ── */
+  .sheet{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-radius:20px 20px 0 0;z-index:101;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,0,.67,0);padding-bottom:env(safe-area-inset-bottom,0px);max-height:92vh;overflow-y:auto}
+  .sheet.show{transform:translateY(0)}
+  .sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 4px}
+  .sheet-header{padding:8px 20px 16px;display:flex;align-items:center;justify-content:space-between}
+  .sheet-title{font-size:18px;font-weight:700}
+  .sheet-close{background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer;padding:4px;line-height:1}
+  .sheet-body{padding:0 20px 24px}
+
+  /* ── FORM ── */
+  .form-group{margin-bottom:16px}
+  .form-label{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:6px;display:block}
+  .form-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:15px;color:var(--text);font-family:inherit;outline:none;transition:border-color .15s}
+  .form-input:focus{border-color:var(--accent)}
+  .form-input::placeholder{color:var(--text3)}
+  textarea.form-input{resize:vertical;min-height:80px}
+  .form-row{display:flex;gap:10px}
+  .form-row .form-group{flex:1}
+  .btn-full{width:100%;padding:14px;font-size:16px;border-radius:var(--radius-sm);margin-top:4px}
+
+  /* ── STARS INPUT ── */
+  .stars-input{display:flex;gap:8px;font-size:30px;cursor:pointer;color:var(--border)}
+  .stars-input span.active{color:var(--yellow)}
+  .stars-input span:hover{color:var(--yellow)}
+
+  /* ── OPTION BUTTONS ── */
+  .option-group{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+  .option-btn{display:flex;align-items:center;gap:14px;padding:16px;background:var(--surface2);border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:inherit;color:var(--text);font-size:15px;font-weight:500;transition:background .15s;text-align:left}
+  .option-btn:hover{background:var(--border)}
+  .option-icon{font-size:24px;flex-shrink:0}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:calc(var(--nav-h) + var(--nav-pb) + 80px);left:50%;transform:translateX(-50%) translateY(16px);background:#1c1c1e;color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;font-weight:500;z-index:200;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;white-space:nowrap}
+  @media(prefers-color-scheme:dark){.toast{background:#f5f5f7;color:#1c1c1e}}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ── DETAIL MODAL ── */
+  .detail-cover-wrap{display:flex;justify-content:center;margin-bottom:20px}
+  .detail-cover{width:120px;height:180px;object-fit:cover;border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+  .detail-cover-ph{width:120px;height:180px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),#5856d6);display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:700;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+  .detail-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:4px;line-height:1.25}
+  .detail-author{font-size:15px;color:var(--text2);text-align:center;margin-bottom:16px}
+  .stars-display{text-align:center;font-size:24px;color:var(--yellow);margin-bottom:20px}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .detail-stat{background:var(--surface2);border-radius:10px;padding:12px 14px}
+  .detail-stat-label{font-size:11px;color:var(--text2);font-weight:500;margin-bottom:2px}
+  .detail-stat-value{font-size:18px;font-weight:700}
+  .detail-notes{background:var(--surface2);border-radius:10px;padding:12px 14px;margin-bottom:16px}
+  .detail-notes p{font-size:14px;color:var(--text);line-height:1.5}
+
+  /* ── API KEY WARNING ── */
+  .warning-box{background:#fff8e6;border:1px solid #ffe082;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#7a6000;line-height:1.5}
+  @media(prefers-color-scheme:dark){.warning-box{background:#2a2200;border-color:#5a4500;color:#ffd046}}
+
+  /* ── SPINNER ── */
+  .spinner{display:inline-block;width:18px;height:18px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── SECTION TITLE ── */
+  .section-title{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin:20px 0 10px}
+  .section-title:first-child{margin-top:0}
+
+  /* ── ADD STEP INDICATOR ── */
+  .step-dots{display:flex;justify-content:center;gap:6px;margin-bottom:20px}
+  .step-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .2s}
+  .step-dot.active{background:var(--accent)}
+
+  /* ── SCROLL FIX ── */
+  .tab-content{display:none}
+  .tab-content.active{display:block}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1 id="headerTitle">Inicio</h1>
+  <div class="header-actions">
+    <button class="icon-btn" id="settingsBtn" title="Ajustes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="main">
+  <div id="tab-inicio" class="tab-content active"></div>
+  <div id="tab-leidos" class="tab-content"></div>
+  <div id="tab-estanteria" class="tab-content"></div>
+  <div id="tab-abandonados" class="tab-content"></div>
+  <div id="tab-stats" class="tab-content"></div>
+</main>
+
+<!-- FAB -->
+<button class="fab" id="fabBtn" aria-label="Añadir libro">+</button>
+
+<!-- Bottom Nav -->
+<nav class="nav">
+  <button class="nav-item active" data-tab="inicio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Inicio
+  </button>
+  <button class="nav-item" data-tab="leidos">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    Leídos
+  </button>
+  <button class="nav-item" data-tab="estanteria">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="7" height="18"/><rect x="9.5" y="7" width="5" height="14"/><path d="M20.4 18.9L15 7l5.4 11.9a.5.5 0 0 1-.9.4l-2-4.5"/></svg>
+    Estantería
+  </button>
+  <button class="nav-item" data-tab="abandonados">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    Abandono
+  </button>
+  <button class="nav-item" data-tab="stats">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Stats
+  </button>
+</nav>
+
+<!-- Backdrop -->
+<div class="backdrop" id="backdrop"></div>
+
+<!-- ADD BOOK SHEET -->
+<div class="sheet" id="addSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title">Añadir libro</span>
+    <button class="sheet-close" id="addClose">×</button>
+  </div>
+  <div class="sheet-body" id="addSheetBody"></div>
+</div>
+
+<!-- DETAIL SHEET -->
+<div class="sheet" id="detailSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title"></span>
+    <button class="sheet-close" id="detailClose">×</button>
+  </div>
+  <div class="sheet-body" id="detailSheetBody"></div>
+</div>
+
+<!-- SETTINGS SHEET -->
+<div class="sheet" id="settingsSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title">Ajustes</span>
+    <button class="sheet-close" id="settingsClose">×</button>
+  </div>
+  <div class="sheet-body" id="settingsBody"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════
+const STORAGE_KEY = 'books';
+const APIKEY_KEY  = 'anthropic_key';
+
+function loadBooks(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]') }
+  catch{ return [] }
+}
+function saveBooks(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)) }
+function loadApiKey(){ return localStorage.getItem(APIKEY_KEY)||'' }
+function saveApiKey(k){ localStorage.setItem(APIKEY_KEY, k) }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6) }
+function today(){ return new Date().toISOString().slice(0,10) }
+
+// ══════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════
+const TABS = ['inicio','leidos','estanteria','abandonados','stats'];
+const HEADERS = {inicio:'Inicio',leidos:'Leídos',estanteria:'Estantería',abandonados:'Abandonados',stats:'Estadísticas'};
+let currentTab = 'inicio';
+let statsCharts = [];
+
+document.querySelectorAll('.nav-item').forEach(btn=>{
+  btn.addEventListener('click',()=>switchTab(btn.dataset.tab));
+});
+
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.getElementById('headerTitle').textContent = HEADERS[tab];
+  document.getElementById('fabBtn').style.display = tab==='stats' ? 'none' : '';
+  renderTab(tab);
+}
+
+function renderTab(tab){
+  if(tab==='inicio')     renderInicio();
+  else if(tab==='leidos')     renderLeidos();
+  else if(tab==='estanteria') renderEstanteria();
+  else if(tab==='abandonados')renderAbandonados();
+  else if(tab==='stats')      renderStats();
+}
+
+// ══════════════════════════════════════
+//  COVER HELPERS
+// ══════════════════════════════════════
+function coverImg(book, w, h, cls=''){
+  if(book.portadaUrl){
+    return `<img src="${escHtml(book.portadaUrl)}" class="${cls}" style="width:${w}px;height:${h}px;object-fit:cover;border-radius:var(--radius-sm)" onerror="this.replaceWith(coverPH('${iniLetter(book.titulo)}',${w},${h}))" alt="">`;
+  }
+  return coverPHHtml(iniLetter(book.titulo), w, h, cls);
+}
+function coverPHHtml(letter, w, h, cls=''){
+  return `<div class="${cls}" style="width:${w}px;height:${h}px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),#5856d6);display:flex;align-items:center;justify-content:center;font-size:${Math.round(h*.22)}px;font-weight:700;color:#fff;flex-shrink:0">${escHtml(letter)}</div>`;
+}
+function coverPH(letter,w,h){
+  const d=document.createElement('div');
+  d.style.cssText=`width:${w}px;height:${h}px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),#5856d6);display:flex;align-items:center;justify-content:center;font-size:${Math.round(h*.22)}px;font-weight:700;color:#fff;flex-shrink:0`;
+  d.textContent=letter; return d;
+}
+function iniLetter(s){ return (s||'?')[0].toUpperCase() }
+function starsStr(n){ return '★'.repeat(n||0)+'☆'.repeat(5-(n||0)) }
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+function fmtDate(d){ if(!d)return'—'; const dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}) }
+function daysBetween(a,b){ if(!a||!b)return null; return Math.round((new Date(b)-new Date(a))/(864e5)) }
+
+// ══════════════════════════════════════
+//  RENDER INICIO
+// ══════════════════════════════════════
+function renderInicio(){
+  const books = loadBooks();
+  const leyendo = books.filter(b=>b.estado==='leyendo');
+  const el = document.getElementById('tab-inicio');
+  if(!leyendo.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📖</div><h2>Sin lecturas activas</h2><p>Añade un libro y empieza a leer.</p></div>`;
+    return;
+  }
+  el.innerHTML = leyendo.map(b=>`
+    <div class="card" style="margin-bottom:12px">
+      <div class="book-current">
+        <div class="book-cover-wrap">
+          ${coverImg(b,80,120,'book-cover')}
+          <span class="badge">Leyendo</span>
+        </div>
+        <div class="book-info">
+          <div class="book-title">${escHtml(b.titulo)}</div>
+          <div class="book-author">${escHtml(b.autor||'')}</div>
+          ${b.paginas?`<div class="book-meta">${b.paginas} páginas${b.genero?' · '+escHtml(b.genero):''}</div>`:''}
+          ${b.fechaInicio?`<div class="book-meta">Empezado ${fmtDate(b.fechaInicio)}</div>`:''}
+          <div class="book-actions">
+            <button class="btn btn-primary" onclick="finishBook('${b.id}')">Terminado</button>
+            <button class="btn btn-danger" onclick="abandonBook('${b.id}')">Abandonar</button>
+          </div>
+        </div>
+      </div>
+      ${b.notas?`<div style="padding:0 16px 14px;font-size:13px;color:var(--text2);line-height:1.5">${escHtml(b.notas)}</div>`:''}
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════
+//  RENDER LEÍDOS
+// ══════════════════════════════════════
+function renderLeidos(){
+  const books = loadBooks().filter(b=>b.estado==='leido').sort((a,b)=>(b.fechaFin||'').localeCompare(a.fechaFin||''));
+  const el = document.getElementById('tab-leidos');
+  if(!books.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">✅</div><h2>Aún no has terminado ninguno</h2><p>Cuando termines un libro aparecerá aquí.</p></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="grid-covers">${books.map(b=>`
+    <div class="cover-item" onclick="openDetail('${b.id}')">
+      ${b.portadaUrl
+        ? `<img src="${escHtml(b.portadaUrl)}" class="cover-thumb" style="aspect-ratio:2/3" onerror="this.outerHTML='${coverPHHtml(iniLetter(b.titulo),96,144,'cover-thumb-placeholder').replace(/'/g,"\\'")}'" alt="">`
+        : `<div class="cover-thumb-placeholder">${escHtml(iniLetter(b.titulo))}</div>`
+      }
+      <div class="cover-title">${escHtml(b.titulo)}</div>
+      ${b.puntuacion?`<div class="stars-sm">${'★'.repeat(b.puntuacion)}</div>`:''}
+    </div>
+  `).join('')}</div>`;
+}
+
+// ══════════════════════════════════════
+//  RENDER ESTANTERÍA
+// ══════════════════════════════════════
+function renderEstanteria(){
+  const books = loadBooks().filter(b=>b.estado==='estanteria');
+  const el = document.getElementById('tab-estanteria');
+  if(!books.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📚</div><h2>Estantería vacía</h2><p>Añade libros que quieras leer en el futuro.</p></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="card">${books.map(b=>`
+    <div class="book-list-item" onclick="openDetail('${b.id}')">
+      ${b.portadaUrl
+        ? `<img src="${escHtml(b.portadaUrl)}" class="list-cover" onerror="this.outerHTML='${coverPHHtml(iniLetter(b.titulo),44,66,'list-cover-ph').replace(/'/g,"\\'")}'" alt="">`
+        : `<div class="list-cover-ph">${escHtml(iniLetter(b.titulo))}</div>`
+      }
+      <div class="list-info">
+        <div class="list-title">${escHtml(b.titulo)}</div>
+        <div class="list-author">${escHtml(b.autor||'')}</div>
+        ${b.paginas?`<div class="list-date">${b.paginas} páginas</div>`:''}
+      </div>
+      <span class="list-chevron">›</span>
+    </div>
+  `).join('')}</div>`;
+}
+
+// ══════════════════════════════════════
+//  RENDER ABANDONADOS
+// ══════════════════════════════════════
+function renderAbandonados(){
+  const books = loadBooks().filter(b=>b.estado==='abandonado').sort((a,b)=>(b.fechaAbandonado||'').localeCompare(a.fechaAbandonado||''));
+  const el = document.getElementById('tab-abandonados');
+  if(!books.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">🚫</div><h2>Sin abandonados</h2><p>¡Buen trabajo terminando lo que empiezas!</p></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="card">${books.map(b=>`
+    <div class="book-list-item" onclick="openDetail('${b.id}')">
+      ${b.portadaUrl
+        ? `<img src="${escHtml(b.portadaUrl)}" class="list-cover" style="opacity:.6" alt="">`
+        : `<div class="list-cover-ph" style="opacity:.6">${escHtml(iniLetter(b.titulo))}</div>`
+      }
+      <div class="list-info">
+        <div class="list-title">${escHtml(b.titulo)}</div>
+        <div class="list-author">${escHtml(b.autor||'')}</div>
+        ${b.fechaAbandonado?`<div class="list-date">Abandonado ${fmtDate(b.fechaAbandonado)}</div>`:''}
+      </div>
+      <span class="list-chevron">›</span>
+    </div>
+  `).join('')}</div>`;
+}
+
+// ══════════════════════════════════════
+//  RENDER STATS
+// ══════════════════════════════════════
+function renderStats(){
+  statsCharts.forEach(c=>c.destroy());
+  statsCharts=[];
+  const el = document.getElementById('tab-stats');
+  const all = loadBooks().filter(b=>b.estado==='leido');
+  if(!all.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><h2>Sin datos aún</h2><p>Termina tu primer libro para ver estadísticas.</p></div>`;
+    return;
+  }
+  const thisYear = new Date().getFullYear();
+  const thisYearBooks = all.filter(b=>(b.fechaFin||'').startsWith(thisYear));
+  const totalPages = all.reduce((s,b)=>s+(b.paginas||0),0);
+  const avgPages = all.length ? Math.round(totalPages/all.length) : 0;
+  const maxPageBook = all.reduce((mx,b)=>(b.paginas||0)>(mx.paginas||0)?b:mx, all[0]);
+
+  // Racha
+  const fines = [...new Set(all.map(b=>b.fechaFin).filter(Boolean))].sort();
+  let streak=0, tempStreak=1;
+  for(let i=1;i<fines.length;i++){
+    const d = daysBetween(fines[i-1],fines[i]);
+    if(d===1){ tempStreak++; streak=Math.max(streak,tempStreak) }
+    else tempStreak=1;
+  }
+  if(fines.length===1) streak=1;
+
+  // Tiempo medio
+  const withDays = all.filter(b=>b.fechaInicio&&b.fechaFin);
+  const avgDays = withDays.length ? Math.round(withDays.reduce((s,b)=>s+daysBetween(b.fechaInicio,b.fechaFin),0)/withDays.length) : null;
+
+  // Autores
+  const authorMap={};
+  all.forEach(b=>{ const a=b.autor||'Desconocido'; authorMap[a]=(authorMap[a]||0)+1 });
+  const topAuthors = Object.entries(authorMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // Géneros
+  const genreMap={};
+  all.forEach(b=>{ if(b.genero){ genreMap[b.genero]=(genreMap[b.genero]||0)+1 } });
+  const topGenres = Object.entries(genreMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // Por año
+  const byYear={};
+  all.forEach(b=>{ const y=(b.fechaFin||'').slice(0,4); if(y) byYear[y]=(byYear[y]||0)+1 });
+  const yearKeys = Object.keys(byYear).sort();
+
+  // Páginas por mes (últimos 12)
+  const pagesByMonth={};
+  all.forEach(b=>{ if(b.paginas&&b.fechaFin){ const ym=b.fechaFin.slice(0,7); pagesByMonth[ym]=(pagesByMonth[ym]||0)+b.paginas } });
+  const monthKeys = Object.keys(pagesByMonth).sort().slice(-12);
+
+  el.innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Total leídos</div><div class="stat-value">${all.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Este año (${thisYear})</div><div class="stat-value">${thisYearBooks.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Total páginas</div><div class="stat-value">${totalPages.toLocaleString('es')}</div></div>
+      <div class="stat-card"><div class="stat-label">Media pág./libro</div><div class="stat-value">${avgPages}</div></div>
+      <div class="stat-card full"><div class="stat-label">Libro más largo</div><div class="stat-value" style="font-size:18px">${escHtml(maxPageBook.titulo)}</div><div class="stat-sub">${maxPageBook.paginas||'?'} páginas</div></div>
+      <div class="stat-card"><div class="stat-label">Racha actual</div><div class="stat-value">${streak}</div><div class="stat-sub">días</div></div>
+      <div class="stat-card"><div class="stat-label">Tiempo medio</div><div class="stat-value">${avgDays!==null?avgDays:'—'}</div><div class="stat-sub">días/libro</div></div>
+    </div>
+
+    ${yearKeys.length>1?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:12px">Libros por año</div><div class="chart-wrap"><canvas id="chartYear"></canvas></div></div>`:''}
+
+    ${monthKeys.length?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:12px">Páginas por mes</div><div class="chart-wrap"><canvas id="chartPages"></canvas></div></div>`:''}
+
+    ${topAuthors.length?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:8px">Top autores</div>${topAuthors.map(([n,c])=>`<div class="rank-item"><span class="rank-name">${escHtml(n)}</span><span class="rank-count">${c} libro${c>1?'s':''}</span></div>`).join('')}</div>`:''}
+
+    ${topGenres.length?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:8px">Géneros</div>${topGenres.map(([n,c])=>`<div class="rank-item"><span class="rank-name">${escHtml(n)}</span><span class="rank-count">${c}</span></div>`).join('')}</div>`:''}
+  `;
+
+  // Render charts after DOM is ready
+  requestAnimationFrame(()=>{
+    const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+    const gridColor = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.06)';
+    const labelColor = isDark ? '#aeaeb2' : '#6e6e73';
+    const opts = {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:gridColor},ticks:{color:labelColor,font:{size:11}}},
+        y:{grid:{color:gridColor},ticks:{color:labelColor,font:{size:11}},beginAtZero:true}
+      }
+    };
+    if(yearKeys.length>1){
+      const c=new Chart(document.getElementById('chartYear'),{type:'bar',data:{labels:yearKeys,datasets:[{data:yearKeys.map(y=>byYear[y]),backgroundColor:'rgba(0,122,255,.7)',borderRadius:6}]},options:opts});
+      statsCharts.push(c);
+    }
+    if(monthKeys.length){
+      const monthLabels=monthKeys.map(m=>{const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleDateString('es-ES',{month:'short',year:'2-digit'})});
+      const c=new Chart(document.getElementById('chartPages'),{type:'bar',data:{labels:monthLabels,datasets:[{data:monthKeys.map(m=>pagesByMonth[m]),backgroundColor:'rgba(88,86,214,.7)',borderRadius:6}]},options:opts});
+      statsCharts.push(c);
+    }
+  });
+}
+
+// ══════════════════════════════════════
+//  DETAIL MODAL
+// ══════════════════════════════════════
+function openDetail(id){
+  const books = loadBooks();
+  const b = books.find(x=>x.id===id);
+  if(!b) return;
+  const sheet = document.getElementById('detailSheet');
+  const body  = document.getElementById('detailSheetBody');
+  sheet.querySelector('.sheet-title').textContent = '';
+  const days = b.fechaInicio&&b.fechaFin ? daysBetween(b.fechaInicio,b.fechaFin) : null;
+  const ppd  = days&&b.paginas ? Math.round(b.paginas/days) : null;
+
+  let coverHtml;
+  if(b.portadaUrl){
+    coverHtml=`<img src="${escHtml(b.portadaUrl)}" class="detail-cover" onerror="this.outerHTML='<div class=detail-cover-ph>${escHtml(iniLetter(b.titulo))}</div>'" alt="">`;
+  } else {
+    coverHtml=`<div class="detail-cover-ph">${escHtml(iniLetter(b.titulo))}</div>`;
+  }
+
+  body.innerHTML=`
+    <div class="detail-cover-wrap">${coverHtml}</div>
+    <div class="detail-title">${escHtml(b.titulo)}</div>
+    <div class="detail-author">${escHtml(b.autor||'')}</div>
+    ${b.puntuacion?`<div class="stars-display">${starsStr(b.puntuacion)}</div>`:''}
+    <div class="detail-grid">
+      ${b.fechaInicio?`<div class="detail-stat"><div class="detail-stat-label">Inicio</div><div class="detail-stat-value" style="font-size:14px">${fmtDate(b.fechaInicio)}</div></div>`:''}
+      ${b.fechaFin?`<div class="detail-stat"><div class="detail-stat-label">Fin</div><div class="detail-stat-value" style="font-size:14px">${fmtDate(b.fechaFin)}</div></div>`:''}
+      ${b.fechaAbandonado?`<div class="detail-stat"><div class="detail-stat-label">Abandonado</div><div class="detail-stat-value" style="font-size:14px">${fmtDate(b.fechaAbandonado)}</div></div>`:''}
+      ${days!==null?`<div class="detail-stat"><div class="detail-stat-label">Días de lectura</div><div class="detail-stat-value">${days}</div></div>`:''}
+      ${b.paginas?`<div class="detail-stat"><div class="detail-stat-label">Páginas</div><div class="detail-stat-value">${b.paginas}</div></div>`:''}
+      ${ppd?`<div class="detail-stat"><div class="detail-stat-label">Pág./día</div><div class="detail-stat-value">${ppd}</div></div>`:''}
+      ${b.genero?`<div class="detail-stat"><div class="detail-stat-label">Género</div><div class="detail-stat-value" style="font-size:14px">${escHtml(b.genero)}</div></div>`:''}
+    </div>
+    ${b.notas?`<div class="detail-notes"><div class="stat-label" style="margin-bottom:6px">Notas</div><p>${escHtml(b.notas)}</p></div>`:''}
+    ${b.estado==='estanteria'?`<button class="btn btn-primary btn-full" onclick="startReading('${b.id}')">📖 Empezar a leer</button>`:''}
+    <button class="btn btn-ghost btn-full" style="margin-top:8px;color:var(--red)" onclick="deleteBook('${b.id}')">Eliminar libro</button>
+  `;
+  showSheet('detail');
+}
+
+function startReading(id){
+  const books = loadBooks();
+  const b = books.find(x=>x.id===id);
+  if(!b) return;
+  b.estado='leyendo'; b.fechaInicio=today();
+  saveBooks(books);
+  hideSheet('detail');
+  toast('📖 ¡A leer!');
+  renderTab(currentTab);
+}
+
+function deleteBook(id){
+  if(!confirm('¿Eliminar este libro?')) return;
+  const books = loadBooks().filter(b=>b.id!==id);
+  saveBooks(books);
+  hideSheet('detail');
+  toast('Libro eliminado');
+  renderTab(currentTab);
+}
+
+// ══════════════════════════════════════
+//  FINISH / ABANDON
+// ══════════════════════════════════════
+function finishBook(id){
+  const books = loadBooks();
+  const b = books.find(x=>x.id===id);
+  if(!b) return;
+  // Show rating sheet
+  const sheet = document.getElementById('detailSheet');
+  const body  = document.getElementById('detailSheetBody');
+  sheet.querySelector('.sheet-title').textContent = 'Puntuar libro';
+  let rating = 0;
+  body.innerHTML=`
+    <div class="detail-cover-wrap">
+      ${b.portadaUrl?`<img src="${escHtml(b.portadaUrl)}" class="detail-cover" alt="">`:`<div class="detail-cover-ph">${escHtml(iniLetter(b.titulo))}</div>`}
+    </div>
+    <div class="detail-title" style="margin-bottom:4px">${escHtml(b.titulo)}</div>
+    <div class="detail-author" style="margin-bottom:20px">${escHtml(b.autor||'')}</div>
+    <div class="form-label" style="text-align:center;margin-bottom:10px">¿Qué te pareció?</div>
+    <div class="stars-input" id="starsInput" style="justify-content:center;margin-bottom:24px">
+      ${[1,2,3,4,5].map(i=>`<span data-v="${i}">☆</span>`).join('')}
+    </div>
+    <button class="btn btn-primary btn-full" id="confirmFinish">Marcar como terminado</button>
+  `;
+  document.querySelectorAll('#starsInput span').forEach(s=>{
+    s.addEventListener('click',()=>{
+      rating=parseInt(s.dataset.v);
+      document.querySelectorAll('#starsInput span').forEach((sp,i)=>sp.textContent=i<rating?'★':'☆');
+      document.querySelectorAll('#starsInput span').forEach((sp,i)=>sp.classList.toggle('active',i<rating));
+    });
+  });
+  document.getElementById('confirmFinish').addEventListener('click',()=>{
+    b.estado='leido'; b.fechaFin=today(); if(rating) b.puntuacion=rating;
+    saveBooks(books);
+    hideSheet('detail');
+    toast('🎉 ¡Libro terminado!');
+    renderTab(currentTab);
+  });
+  showSheet('detail');
+}
+
+function abandonBook(id){
+  if(!confirm('¿Marcar como abandonado?')) return;
+  const books = loadBooks();
+  const b = books.find(x=>x.id===id);
+  if(!b) return;
+  b.estado='abandonado'; b.fechaAbandonado=today();
+  saveBooks(books);
+  toast('Marcado como abandonado');
+  renderTab(currentTab);
+}
+
+// ══════════════════════════════════════
+//  ADD BOOK FLOW
+// ══════════════════════════════════════
+document.getElementById('fabBtn').addEventListener('click',()=>openAddFlow());
+
+let addState = {};
+
+function openAddFlow(){
+  addState = {};
+  renderAddStep1();
+  showSheet('add');
+}
+
+function renderAddStep1(){
+  document.getElementById('addSheet').querySelector('.sheet-title').textContent = 'Añadir libro';
+  const body = document.getElementById('addSheetBody');
+  body.innerHTML=`
+    <div class="step-dots"><div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div></div>
+    <div class="form-label" style="margin-bottom:12px">¿Cómo quieres añadirlo?</div>
+    <div class="option-group">
+      <button class="option-btn" id="optPhoto">
+        <span class="option-icon">📷</span>
+        <div><div style="font-weight:600">Foto de portada</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Detecta título y autor automáticamente</div></div>
+      </button>
+      <button class="option-btn" id="optManual">
+        <span class="option-icon">✏️</span>
+        <div><div style="font-weight:600">Manual</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Escribe título y autor directamente</div></div>
+      </button>
+    </div>
+    <input type="file" id="photoInput" accept="image/*" style="display:none">
+  `;
+  document.getElementById('optPhoto').addEventListener('click',()=>{
+    const key=loadApiKey();
+    if(!key){ renderApiKeyPrompt(); return; }
+    document.getElementById('photoInput').click();
+  });
+  document.getElementById('photoInput').addEventListener('change',e=>{
+    if(e.target.files[0]) handlePhotoUpload(e.target.files[0]);
+  });
+  document.getElementById('optManual').addEventListener('click',()=>renderAddManual());
+}
+
+function renderApiKeyPrompt(){
+  const body = document.getElementById('addSheetBody');
+  body.innerHTML=`
+    <div class="step-dots"><div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div></div>
+    <div class="warning-box">⚠️ La API key se guarda en localStorage de tu dispositivo, que <strong>no está cifrado</strong>. Solo úsala en un dispositivo personal de confianza.</div>
+    <div class="form-group">
+      <label class="form-label">API Key de Anthropic</label>
+      <input class="form-input" id="apiKeyInput" type="password" placeholder="sk-ant-...">
+    </div>
+    <button class="btn btn-primary btn-full" id="saveApiKey">Guardar y continuar</button>
+    <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="renderAddStep1()">Cancelar</button>
+  `;
+  document.getElementById('saveApiKey').addEventListener('click',()=>{
+    const v=document.getElementById('apiKeyInput').value.trim();
+    if(!v.startsWith('sk-')){ toast('API key inválida'); return; }
+    saveApiKey(v); toast('API key guardada');
+    document.getElementById('photoInput').click();
+  });
+}
+
+async function handlePhotoUpload(file){
+  const body = document.getElementById('addSheetBody');
+  body.innerHTML=`<div style="text-align:center;padding:40px 0"><span class="spinner"></span><div style="margin-top:12px;color:var(--text2);font-size:14px">Analizando portada…</div></div>`;
+
+  try {
+    const base64 = await fileToBase64(file);
+    const mtype  = file.type || 'image/jpeg';
+    const key    = loadApiKey();
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:200,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mtype,data:base64}},
+          {type:'text',text:'Extract the book title and author from this cover. Respond ONLY with valid JSON: {"title":"...","author":"..."}'}
+        ]}]
+      })
+    });
+
+    if(!resp.ok) throw new Error('API error '+resp.status);
+    const data = await resp.json();
+    const raw  = data.content?.find(c=>c.type==='text')?.text||'{}';
+    const clean= raw.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+    addState.titulo = parsed.title||'';
+    addState.autor  = parsed.author||'';
+    addState.portadaBase64 = base64;
+    addState.portadaMtype  = mtype;
+    renderAddEnrich();
+  } catch(err){
+    console.error(err);
+    toast('Error al analizar la portada');
+    renderAddManual();
+  }
+}
+
+async function renderAddEnrich(skipApi=false){
+  const body = document.getElementById('addSheetBody');
+  if(!skipApi && addState.titulo){
+    body.innerHTML=`<div style="text-align:center;padding:40px 0"><span class="spinner"></span><div style="margin-top:12px;color:var(--text2);font-size:14px">Buscando datos del libro…</div></div>`;
+    try{
+      const t=encodeURIComponent(addState.titulo);
+      const a=encodeURIComponent(addState.autor||'');
+      const r=await fetch(`https://openlibrary.org/search.json?title=${t}&author=${a}&limit=1&fields=title,author_name,number_of_pages_median,subject`);
+      const d=await r.json();
+      if(d.docs&&d.docs[0]){
+        const doc=d.docs[0];
+        if(doc.number_of_pages_median) addState.paginas=doc.number_of_pages_median;
+        if(doc.subject&&doc.subject[0]){
+          const genres=['Fiction','Non-fiction','Science','History','Biography','Mystery','Fantasy','Romance','Thriller','Horror','Science fiction','Literary fiction','Classic','Poetry','Philosophy','Psychology','Business','Self-help','Travel','Cooking'];
+          const match=doc.subject.find(s=>genres.some(g=>s.toLowerCase().includes(g.toLowerCase())));
+          addState.genero=match||doc.subject[0];
+          if(addState.genero.length>40) addState.genero=addState.genero.slice(0,40);
+        }
+        if(!addState.titulo&&doc.title) addState.titulo=doc.title;
+        if(!addState.autor&&doc.author_name) addState.autor=doc.author_name[0];
+      }
+    } catch(e){ /* silent fallback */ }
+  }
+  renderAddForm();
+}
+
+function renderAddManual(){
+  renderAddForm();
+}
+
+function renderAddForm(){
+  document.getElementById('addSheet').querySelector('.sheet-title').textContent = 'Datos del libro';
+  const body = document.getElementById('addSheetBody');
+  body.innerHTML=`
+    <div class="step-dots"><div class="step-dot"></div><div class="step-dot active"></div><div class="step-dot"></div></div>
+    <div class="form-group">
+      <label class="form-label">Título</label>
+      <input class="form-input" id="inTitulo" value="${escHtml(addState.titulo||'')}" placeholder="Título del libro">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Autor</label>
+      <input class="form-input" id="inAutor" value="${escHtml(addState.autor||'')}" placeholder="Nombre del autor">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Páginas</label>
+        <input class="form-input" id="inPaginas" type="number" value="${addState.paginas||''}" placeholder="300">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Género</label>
+        <input class="form-input" id="inGenero" value="${escHtml(addState.genero||'')}" placeholder="Novela…">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">URL de portada (opcional)</label>
+      <input class="form-input" id="inPortada" value="${escHtml(addState.portadaUrl||'')}" placeholder="https://...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notas (opcional)</label>
+      <textarea class="form-input" id="inNotas" placeholder="Impresiones, citas…">${escHtml(addState.notas||'')}</textarea>
+    </div>
+    <button class="btn btn-primary btn-full" id="nextToDestino">Siguiente →</button>
+  `;
+  document.getElementById('nextToDestino').addEventListener('click',()=>{
+    const titulo=document.getElementById('inTitulo').value.trim();
+    const autor =document.getElementById('inAutor').value.trim();
+    if(!titulo){ toast('El título es obligatorio'); return; }
+    addState.titulo=titulo; addState.autor=autor;
+    addState.paginas=parseInt(document.getElementById('inPaginas').value)||null;
+    addState.genero=document.getElementById('inGenero').value.trim()||null;
+    addState.portadaUrl=document.getElementById('inPortada').value.trim()||null;
+    addState.notas=document.getElementById('inNotas').value.trim()||null;
+    renderAddDestino();
+  });
+}
+
+function renderAddDestino(){
+  document.getElementById('addSheet').querySelector('.sheet-title').textContent = '¿Dónde añadir?';
+  const body = document.getElementById('addSheetBody');
+  body.innerHTML=`
+    <div class="step-dots"><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot active"></div></div>
+    <div class="option-group">
+      <button class="option-btn" id="destLeyendo">
+        <span class="option-icon">📖</span>
+        <div><div style="font-weight:600">Leyendo ahora</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Lo empiezo hoy</div></div>
+      </button>
+      <button class="option-btn" id="destEstanteria">
+        <span class="option-icon">📚</span>
+        <div><div style="font-weight:600">Estantería</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Lo leeré más adelante</div></div>
+      </button>
+    </div>
+  `;
+  document.getElementById('destLeyendo').addEventListener('click',()=>saveNewBook('leyendo'));
+  document.getElementById('destEstanteria').addEventListener('click',()=>saveNewBook('estanteria'));
+}
+
+function saveNewBook(estado){
+  const books=loadBooks();
+  const book={
+    id: uid(),
+    titulo: addState.titulo,
+    autor:  addState.autor||null,
+    fechaInicio: estado==='leyendo'?today():null,
+    fechaFin: null,
+    fechaAbandonado: null,
+    puntuacion: null,
+    paginas: addState.paginas||null,
+    genero:  addState.genero||null,
+    estado,
+    notas:   addState.notas||null,
+    portadaUrl: addState.portadaUrl||null,
+    addedAt: today()
+  };
+  books.push(book);
+  saveBooks(books);
+  hideSheet('add');
+  toast(estado==='leyendo'?'📖 ¡A leer!':'📚 Añadido a la estantería');
+  renderTab(currentTab);
+  if(estado==='leyendo'&&currentTab!=='inicio') switchTab('inicio');
+  else if(estado==='estanteria'&&currentTab!=='estanteria') switchTab('estanteria');
+}
+
+// ══════════════════════════════════════
+//  SETTINGS SHEET
+// ══════════════════════════════════════
+document.getElementById('settingsBtn').addEventListener('click',()=>{
+  const body=document.getElementById('settingsBody');
+  const key=loadApiKey();
+  const books=loadBooks();
+  body.innerHTML=`
+    <div class="form-group">
+      <label class="form-label">API Key de Anthropic</label>
+      <div class="warning-box">⚠️ Guardada en localStorage, no cifrada. Solo en dispositivos de confianza.</div>
+      <input class="form-input" id="settApiKey" type="password" value="${escHtml(key)}" placeholder="sk-ant-...">
+      <button class="btn btn-primary btn-full" style="margin-top:10px" id="saveApiKeySettings">Guardar API key</button>
+    </div>
+    <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+      <div class="stat-label">Datos almacenados</div>
+      <div style="margin-top:8px;font-size:14px;color:var(--text2)">${books.length} libros en localStorage</div>
+    </div>
+    <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+      <button class="btn btn-ghost btn-full" id="exportData">📤 Exportar datos (JSON)</button>
+    </div>
+    <div style="margin-top:10px">
+      <button class="btn btn-ghost btn-full" style="color:var(--red)" id="clearData">🗑 Borrar todos los datos</button>
+    </div>
+  `;
+  document.getElementById('saveApiKeySettings').addEventListener('click',()=>{
+    const v=document.getElementById('settApiKey').value.trim();
+    saveApiKey(v); toast('API key guardada');
+  });
+  document.getElementById('exportData').addEventListener('click',()=>{
+    const blob=new Blob([JSON.stringify(loadBooks(),null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='books-export.json'; a.click();
+  });
+  document.getElementById('clearData').addEventListener('click',()=>{
+    if(!confirm('¿Borrar todos los libros? Esta acción no se puede deshacer.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    hideSheet('settings');
+    toast('Datos borrados');
+    renderTab(currentTab);
+  });
+  showSheet('settings');
+});
+
+// ══════════════════════════════════════
+//  SHEET UTILS
+// ══════════════════════════════════════
+function showSheet(name){
+  document.getElementById('backdrop').classList.add('show');
+  document.getElementById(name+'Sheet').classList.add('show');
+}
+function hideSheet(name){
+  document.getElementById(name+'Sheet').classList.remove('show');
+  // Hide backdrop only if no other sheet open
+  const anyOpen=['add','detail','settings'].some(n=>document.getElementById(n+'Sheet').classList.contains('show'));
+  if(!anyOpen) document.getElementById('backdrop').classList.remove('show');
+}
+
+['add','detail','settings'].forEach(name=>{
+  const closeBtn=document.getElementById(name+'Close');
+  if(closeBtn) closeBtn.addEventListener('click',()=>hideSheet(name));
+});
+
+document.getElementById('backdrop').addEventListener('click',()=>{
+  ['add','detail','settings'].forEach(n=>hideSheet(n));
+});
+
+// ══════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════
+let toastTimer=null;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+// ══════════════════════════════════════
+//  FILE TO BASE64
+// ══════════════════════════════════════
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=()=>rej(new Error('Read failed'));
+    r.readAsDataURL(file);
+  });
+}
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+renderInicio();
+</script>
+</body>
+</html>
