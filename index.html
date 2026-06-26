@@ -35,7 +35,12 @@
   /* ── HEADER ── */
   .header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px 12px;padding-top:calc(16px + env(safe-area-inset-top,0px));display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
   .header h1{font-size:22px;font-weight:700;letter-spacing:-.4px}
-  .header-actions{display:flex;gap:8px}
+  .header-actions{display:flex;gap:8px;align-items:center}
+  .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s}
+  .sync-dot.ok{background:var(--green)}
+  .sync-dot.error{background:var(--red)}
+  .sync-dot.pending{background:var(--orange);animation:pulse .8s infinite alternate}
+  @keyframes pulse{to{opacity:.3}}
   .icon-btn{background:none;border:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--accent);font-size:18px;transition:background .15s}
   .icon-btn:hover{background:var(--surface2)}
 
@@ -194,6 +199,7 @@
 <header class="header">
   <h1 id="headerTitle">Inicio</h1>
   <div class="header-actions">
+    <div class="sync-dot" id="syncDot" title="Estado sync"></div>
     <button class="icon-btn" id="settingsBtn" title="Ajustes">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
@@ -277,12 +283,21 @@
 // ══════════════════════════════════════
 const STORAGE_KEY = 'books';
 const APIKEY_KEY  = 'anthropic_key';
+const GHCFG_KEY   = 'books_ghcfg';
+
+let syncSha = null;
+
+function loadGhCfg(){ try{ return JSON.parse(localStorage.getItem(GHCFG_KEY)||'{}') }catch{ return {} } }
+function saveGhCfg(c){ localStorage.setItem(GHCFG_KEY, JSON.stringify(c)) }
 
 function loadBooks(){
   try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]') }
   catch{ return [] }
 }
-function saveBooks(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)) }
+function saveBooks(arr){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  syncToGitHub();
+}
 function loadApiKey(){ return localStorage.getItem(APIKEY_KEY)||'' }
 function saveApiKey(k){ localStorage.setItem(APIKEY_KEY, k) }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6) }
@@ -888,13 +903,23 @@ function saveNewBook(estado){
 document.getElementById('settingsBtn').addEventListener('click',()=>{
   const body=document.getElementById('settingsBody');
   const key=loadApiKey();
+  const cfg=loadGhCfg();
   const books=loadBooks();
   body.innerHTML=`
     <div class="form-group">
-      <label class="form-label">API Key de Anthropic</label>
-      <div class="warning-box">⚠️ Guardada en localStorage, no cifrada. Solo en dispositivos de confianza.</div>
-      <input class="form-input" id="settApiKey" type="password" value="${escHtml(key)}" placeholder="sk-ant-...">
-      <button class="btn btn-primary btn-full" style="margin-top:10px" id="saveApiKeySettings">Guardar API key</button>
+      <label class="form-label">Sincronización GitHub</label>
+      <input class="form-input" id="settGhUser" value="${escHtml(cfg.user||'jonito82')}" placeholder="usuario" style="margin-bottom:8px">
+      <input class="form-input" id="settGhRepo" value="${escHtml(cfg.repo||'librosjonito')}" placeholder="repo" style="margin-bottom:8px">
+      <input class="form-input" id="settGhToken" type="password" value="${escHtml(cfg.token||'')}" placeholder="ghp_...">
+      <button class="btn btn-primary btn-full" style="margin-top:10px" id="saveGhCfg">Guardar y sincronizar</button>
+    </div>
+    <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+      <div class="form-group">
+        <label class="form-label">API Key de Anthropic</label>
+        <div class="warning-box">⚠️ Guardada en localStorage, no cifrada. Solo en dispositivos de confianza.</div>
+        <input class="form-input" id="settApiKey" type="password" value="${escHtml(key)}" placeholder="sk-ant-...">
+        <button class="btn btn-primary btn-full" style="margin-top:10px" id="saveApiKeySettings">Guardar API key</button>
+      </div>
     </div>
     <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
       <div class="stat-label">Datos almacenados</div>
@@ -907,6 +932,19 @@ document.getElementById('settingsBtn').addEventListener('click',()=>{
       <button class="btn btn-ghost btn-full" style="color:var(--red)" id="clearData">🗑 Borrar todos los datos</button>
     </div>
   `;
+  document.getElementById('saveGhCfg').addEventListener('click',()=>{
+    const c={
+      user: document.getElementById('settGhUser').value.trim(),
+      repo: document.getElementById('settGhRepo').value.trim(),
+      token: document.getElementById('settGhToken').value.trim()
+    };
+    if(!c.token){ toast('Token obligatorio'); return; }
+    saveGhCfg(c);
+    syncSha=null;
+    toast('Config guardada, sincronizando…');
+    hideSheet('settings');
+    loadFromGitHub();
+  });
   document.getElementById('saveApiKeySettings').addEventListener('click',()=>{
     const v=document.getElementById('settApiKey').value.trim();
     saveApiKey(v); toast('API key guardada');
@@ -973,9 +1011,67 @@ function fileToBase64(file){
 }
 
 // ══════════════════════════════════════
+//  GITHUB SYNC
+// ══════════════════════════════════════
+function setSyncStatus(state, msg){
+  const dot = document.getElementById('syncDot');
+  if(!dot) return;
+  dot.className = 'sync-dot ' + state;
+  dot.title = msg || state;
+}
+
+async function loadFromGitHub(){
+  const cfg = loadGhCfg();
+  if(!cfg.token || !cfg.user || !cfg.repo) return;
+  setSyncStatus('pending','Cargando...');
+  try{
+    const r = await fetch(`https://api.github.com/repos/${cfg.user}/${cfg.repo}/contents/data.json`,
+      {headers:{'Authorization':'token '+cfg.token,'Accept':'application/vnd.github.v3+json'}});
+    if(r.status===404){ setSyncStatus('ok','Sin datos remotos aún'); return; }
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j = await r.json();
+    syncSha = j.sha;
+    const b64 = j.content.replace(/\n/g,'');
+    const bytes = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
+    const remote = JSON.parse(new TextDecoder('utf-8').decode(bytes));
+    // Merge: remote wins, keep local-only entries not in remote
+    const remoteIds = new Set((remote||[]).map(b=>b.id));
+    const localOnly = loadBooks().filter(b=>!remoteIds.has(b.id));
+    const merged = [...(remote||[]), ...localOnly];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    renderTab(currentTab);
+    setSyncStatus('ok','Sincronizado · '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}));
+  }catch(e){ setSyncStatus('error','Error: '+e.message); }
+}
+
+async function syncToGitHub(){
+  const cfg = loadGhCfg();
+  if(!cfg.token || !cfg.user || !cfg.repo) return;
+  setSyncStatus('pending','Guardando...');
+  try{
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(loadBooks(),null,2))));
+    const body = {message:'update books', content};
+    if(syncSha) body.sha = syncSha;
+    const r = await fetch(`https://api.github.com/repos/${cfg.user}/${cfg.repo}/contents/data.json`,{
+      method:'PUT',
+      headers:{'Authorization':'token '+cfg.token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j = await r.json();
+    syncSha = j.content.sha;
+    setSyncStatus('ok','Sincronizado · '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}));
+  }catch(e){
+    if(e.message.includes('409')){ syncSha=null; loadFromGitHub(); }
+    else setSyncStatus('error','Error: '+e.message);
+  }
+}
+
+// ══════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════
 renderInicio();
+loadFromGitHub();
 </script>
 </body>
 </html>
