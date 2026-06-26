@@ -282,7 +282,6 @@
 //  STATE
 // ══════════════════════════════════════
 const STORAGE_KEY = 'books';
-const APIKEY_KEY  = 'anthropic_key';
 const GHCFG_KEY   = 'books_ghcfg';
 
 let syncSha = null;
@@ -298,8 +297,6 @@ function saveBooks(arr){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
   syncToGitHub();
 }
-function loadApiKey(){ return localStorage.getItem(APIKEY_KEY)||'' }
-function saveApiKey(k){ localStorage.setItem(APIKEY_KEY, k) }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6) }
 function today(){ return new Date().toISOString().slice(0,10) }
 
@@ -683,133 +680,14 @@ let addState = {};
 
 function openAddFlow(){
   addState = {};
-  renderAddStep1();
+  renderAddForm();
   showSheet('add');
 }
 
-function renderAddStep1(){
+function renderAddForm(){
   document.getElementById('addSheet').querySelector('.sheet-title').textContent = 'Añadir libro';
   const body = document.getElementById('addSheetBody');
   body.innerHTML=`
-    <div class="step-dots"><div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div></div>
-    <div class="form-label" style="margin-bottom:12px">¿Cómo quieres añadirlo?</div>
-    <div class="option-group">
-      <button class="option-btn" id="optPhoto">
-        <span class="option-icon">📷</span>
-        <div><div style="font-weight:600">Foto de portada</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Detecta título y autor automáticamente</div></div>
-      </button>
-      <button class="option-btn" id="optManual">
-        <span class="option-icon">✏️</span>
-        <div><div style="font-weight:600">Manual</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Escribe título y autor directamente</div></div>
-      </button>
-    </div>
-    <input type="file" id="photoInput" accept="image/*" style="display:none">
-  `;
-  document.getElementById('optPhoto').addEventListener('click',()=>{
-    const key=loadApiKey();
-    if(!key){ renderApiKeyPrompt(); return; }
-    document.getElementById('photoInput').click();
-  });
-  document.getElementById('photoInput').addEventListener('change',e=>{
-    if(e.target.files[0]) handlePhotoUpload(e.target.files[0]);
-  });
-  document.getElementById('optManual').addEventListener('click',()=>renderAddManual());
-}
-
-function renderApiKeyPrompt(){
-  const body = document.getElementById('addSheetBody');
-  body.innerHTML=`
-    <div class="step-dots"><div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div></div>
-    <div class="warning-box">⚠️ La API key se guarda en localStorage de tu dispositivo, que <strong>no está cifrado</strong>. Solo úsala en un dispositivo personal de confianza.</div>
-    <div class="form-group">
-      <label class="form-label">API Key de Anthropic</label>
-      <input class="form-input" id="apiKeyInput" type="password" placeholder="sk-ant-...">
-    </div>
-    <button class="btn btn-primary btn-full" id="saveApiKey">Guardar y continuar</button>
-    <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="renderAddStep1()">Cancelar</button>
-  `;
-  document.getElementById('saveApiKey').addEventListener('click',()=>{
-    const v=document.getElementById('apiKeyInput').value.trim();
-    if(!v.startsWith('sk-')){ toast('API key inválida'); return; }
-    saveApiKey(v); toast('API key guardada');
-    document.getElementById('photoInput').click();
-  });
-}
-
-async function handlePhotoUpload(file){
-  const body = document.getElementById('addSheetBody');
-  body.innerHTML=`<div style="text-align:center;padding:40px 0"><span class="spinner"></span><div style="margin-top:12px;color:var(--text2);font-size:14px">Analizando portada…</div></div>`;
-
-  try {
-    const base64 = await fileToBase64(file);
-    const mtype  = file.type || 'image/jpeg';
-    const key    = loadApiKey();
-
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:200,
-        messages:[{role:'user',content:[
-          {type:'image',source:{type:'base64',media_type:mtype,data:base64}},
-          {type:'text',text:'Extract the book title and author from this cover. Respond ONLY with valid JSON: {"title":"...","author":"..."}'}
-        ]}]
-      })
-    });
-
-    if(!resp.ok) throw new Error('API error '+resp.status);
-    const data = await resp.json();
-    const raw  = data.content?.find(c=>c.type==='text')?.text||'{}';
-    const clean= raw.replace(/```json|```/g,'').trim();
-    const parsed=JSON.parse(clean);
-    addState.titulo = parsed.title||'';
-    addState.autor  = parsed.author||'';
-    addState.portadaBase64 = base64;
-    addState.portadaMtype  = mtype;
-    renderAddEnrich();
-  } catch(err){
-    console.error(err);
-    toast('Error al analizar la portada');
-    renderAddManual();
-  }
-}
-
-async function renderAddEnrich(skipApi=false){
-  const body = document.getElementById('addSheetBody');
-  if(!skipApi && addState.titulo){
-    body.innerHTML=`<div style="text-align:center;padding:40px 0"><span class="spinner"></span><div style="margin-top:12px;color:var(--text2);font-size:14px">Buscando datos del libro…</div></div>`;
-    try{
-      const t=encodeURIComponent(addState.titulo);
-      const a=encodeURIComponent(addState.autor||'');
-      const r=await fetch(`https://openlibrary.org/search.json?title=${t}&author=${a}&limit=1&fields=title,author_name,number_of_pages_median,subject`);
-      const d=await r.json();
-      if(d.docs&&d.docs[0]){
-        const doc=d.docs[0];
-        if(doc.number_of_pages_median) addState.paginas=doc.number_of_pages_median;
-        if(doc.subject&&doc.subject[0]){
-          const genres=['Fiction','Non-fiction','Science','History','Biography','Mystery','Fantasy','Romance','Thriller','Horror','Science fiction','Literary fiction','Classic','Poetry','Philosophy','Psychology','Business','Self-help','Travel','Cooking'];
-          const match=doc.subject.find(s=>genres.some(g=>s.toLowerCase().includes(g.toLowerCase())));
-          addState.genero=match||doc.subject[0];
-          if(addState.genero.length>40) addState.genero=addState.genero.slice(0,40);
-        }
-        if(!addState.titulo&&doc.title) addState.titulo=doc.title;
-        if(!addState.autor&&doc.author_name) addState.autor=doc.author_name[0];
-      }
-    } catch(e){ /* silent fallback */ }
-  }
-  renderAddForm();
-}
-
-function renderAddManual(){
-  renderAddForm();
-}
-
-function renderAddForm(){
-  document.getElementById('addSheet').querySelector('.sheet-title').textContent = 'Datos del libro';
-  const body = document.getElementById('addSheetBody');
-  body.innerHTML=`
-    <div class="step-dots"><div class="step-dot"></div><div class="step-dot active"></div><div class="step-dot"></div></div>
     <div class="form-group">
       <label class="form-label">Título</label>
       <input class="form-input" id="inTitulo" value="${escHtml(addState.titulo||'')}" placeholder="Título del libro">
@@ -902,24 +780,15 @@ function saveNewBook(estado){
 // ══════════════════════════════════════
 document.getElementById('settingsBtn').addEventListener('click',()=>{
   const body=document.getElementById('settingsBody');
-  const key=loadApiKey();
   const cfg=loadGhCfg();
   const books=loadBooks();
   body.innerHTML=`
     <div class="form-group">
       <label class="form-label">Sincronización GitHub</label>
       <input class="form-input" id="settGhUser" value="${escHtml(cfg.user||'jonito82')}" placeholder="usuario" style="margin-bottom:8px">
-      <input class="form-input" id="settGhRepo" value="${escHtml(cfg.repo||'librosjonito')}" placeholder="repo" style="margin-bottom:8px">
+      <input class="form-input" id="settGhRepo" value="${escHtml(cfg.repo||'Librosjonito')}" placeholder="repo" style="margin-bottom:8px">
       <input class="form-input" id="settGhToken" type="password" value="${escHtml(cfg.token||'')}" placeholder="ghp_...">
       <button class="btn btn-primary btn-full" style="margin-top:10px" id="saveGhCfg">Guardar y sincronizar</button>
-    </div>
-    <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
-      <div class="form-group">
-        <label class="form-label">API Key de Anthropic</label>
-        <div class="warning-box">⚠️ Guardada en localStorage, no cifrada. Solo en dispositivos de confianza.</div>
-        <input class="form-input" id="settApiKey" type="password" value="${escHtml(key)}" placeholder="sk-ant-...">
-        <button class="btn btn-primary btn-full" style="margin-top:10px" id="saveApiKeySettings">Guardar API key</button>
-      </div>
     </div>
     <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
       <div class="stat-label">Datos almacenados</div>
@@ -944,10 +813,6 @@ document.getElementById('settingsBtn').addEventListener('click',()=>{
     toast('Config guardada, sincronizando…');
     hideSheet('settings');
     loadFromGitHub();
-  });
-  document.getElementById('saveApiKeySettings').addEventListener('click',()=>{
-    const v=document.getElementById('settApiKey').value.trim();
-    saveApiKey(v); toast('API key guardada');
   });
   document.getElementById('exportData').addEventListener('click',()=>{
     const blob=new Blob([JSON.stringify(loadBooks(),null,2)],{type:'application/json'});
@@ -996,18 +861,6 @@ function toast(msg){
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
-}
-
-// ══════════════════════════════════════
-//  FILE TO BASE64
-// ══════════════════════════════════════
-function fileToBase64(file){
-  return new Promise((res,rej)=>{
-    const r=new FileReader();
-    r.onload=()=>res(r.result.split(',')[1]);
-    r.onerror=()=>rej(new Error('Read failed'));
-    r.readAsDataURL(file);
-  });
 }
 
 // ══════════════════════════════════════
