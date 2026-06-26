@@ -397,14 +397,19 @@ function renderLeidos(){
     el.innerHTML=`<div class="empty"><div class="empty-icon">✅</div><h2>Aún no has terminado ninguno</h2><p>Cuando termines un libro aparecerá aquí.</p></div>`;
     return;
   }
-  el.innerHTML=`<div class="grid-covers">${books.map(b=>`
-    <div class="cover-item" onclick="openDetail('${b.id}')">
-      ${b.portadaUrl
-        ? `<img src="${escHtml(b.portadaUrl)}" class="cover-thumb" style="aspect-ratio:2/3" onerror="this.outerHTML='${coverPHHtml(iniLetter(b.titulo),96,144,'cover-thumb-placeholder').replace(/'/g,"\\'")}'" alt="">`
-        : `<div class="cover-thumb-placeholder">${escHtml(iniLetter(b.titulo))}</div>`
-      }
-      <div class="cover-title">${escHtml(b.titulo)}</div>
-      ${b.puntuacion?`<div class="stars-sm">${'★'.repeat(b.puntuacion)}</div>`:''}
+  el.innerHTML=`<div class="card">${books.map((b,i)=>`
+    <div class="book-list-item" onclick="openDetail('${b.id}')">
+      <div style="width:28px;text-align:center;font-size:13px;color:var(--text3);font-weight:600;flex-shrink:0">${i+1}</div>
+      <div class="list-info">
+        <div class="list-title">${escHtml(b.titulo)}</div>
+        <div class="list-author">${escHtml(b.autor||'')}</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:3px">
+          ${b.puntuacion?`<span style="font-size:11px;color:var(--yellow)">${'★'.repeat(b.puntuacion)}</span>`:''}
+          ${b.fechaFin?`<span style="font-size:11px;color:var(--text3)">${fmtDate(b.fechaFin)}</span>`:''}
+          ${b.paginas?`<span style="font-size:11px;color:var(--text3)">${b.paginas} pág.</span>`:''}
+        </div>
+      </div>
+      <span class="list-chevron">›</span>
     </div>
   `).join('')}</div>`;
 }
@@ -479,15 +484,16 @@ function renderStats(){
   const avgPages = all.length ? Math.round(totalPages/all.length) : 0;
   const maxPageBook = all.reduce((mx,b)=>(b.paginas||0)>(mx.paginas||0)?b:mx, all[0]);
 
-  // Racha
-  const fines = [...new Set(all.map(b=>b.fechaFin).filter(Boolean))].sort();
-  let streak=0, tempStreak=1;
-  for(let i=1;i<fines.length;i++){
-    const d = daysBetween(fines[i-1],fines[i]);
-    if(d===1){ tempStreak++; streak=Math.max(streak,tempStreak) }
-    else tempStreak=1;
-  }
-  if(fines.length===1) streak=1;
+  // Mejor mes (más libros terminados)
+  const byMonth={};
+  all.forEach(b=>{ if(b.fechaFin){ const ym=b.fechaFin.slice(0,7); byMonth[ym]=(byMonth[ym]||0)+1 } });
+  const bestMonthEntry = Object.entries(byMonth).sort((a,b)=>b[1]-a[1])[0];
+  const bestMonthCount = bestMonthEntry ? bestMonthEntry[1] : 0;
+  const bestMonthLabel = bestMonthEntry ? (()=>{ const [y,m]=bestMonthEntry[0].split('-'); return new Date(y,m-1).toLocaleDateString('es-ES',{month:'short',year:'numeric'}) })() : '—';
+
+  // Mes actual
+  const nowYM = new Date().toISOString().slice(0,7);
+  const thisMonthCount = byMonth[nowYM]||0;
 
   // Tiempo medio
   const withDays = all.filter(b=>b.fechaInicio&&b.fechaFin);
@@ -520,7 +526,8 @@ function renderStats(){
       <div class="stat-card"><div class="stat-label">Total páginas</div><div class="stat-value">${totalPages.toLocaleString('es')}</div></div>
       <div class="stat-card"><div class="stat-label">Media pág./libro</div><div class="stat-value">${avgPages}</div></div>
       <div class="stat-card full"><div class="stat-label">Libro más largo</div><div class="stat-value" style="font-size:18px">${escHtml(maxPageBook.titulo)}</div><div class="stat-sub">${maxPageBook.paginas||'?'} páginas</div></div>
-      <div class="stat-card"><div class="stat-label">Racha actual</div><div class="stat-value">${streak}</div><div class="stat-sub">días</div></div>
+      <div class="stat-card"><div class="stat-label">Mejor mes</div><div class="stat-value">${bestMonthCount}</div><div class="stat-sub">${bestMonthLabel}</div></div>
+      <div class="stat-card"><div class="stat-label">Este mes</div><div class="stat-value">${thisMonthCount}</div><div class="stat-sub">libros terminados</div></div>
       <div class="stat-card"><div class="stat-label">Tiempo medio</div><div class="stat-value">${avgDays!==null?avgDays:'—'}</div><div class="stat-sub">días/libro</div></div>
     </div>
 
