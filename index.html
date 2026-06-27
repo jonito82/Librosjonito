@@ -355,7 +355,8 @@ function coverImg(b, w, h, cls){
   const phCls = cls==='inicio-cover' ? 'inicio-cover-ph' : (cls==='drill-cover'?'drill-cover-ph':'book-cover-placeholder');
   const letter = escHtml(iniLetter(b.titulo));
   if(b.portadaUrl){
-    return `<img src="${escHtml(b.portadaUrl)}" class="${cls}" style="${style}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="${phCls}" style="${style};display:none">${letter}</div>`;
+    // No usar onerror con outerHTML — usar wrapper con display toggle
+    return `<div style="position:relative;${style?'width:'+w+'px;height:'+h+'px':''}"><img src="${escHtml(b.portadaUrl)}" class="${cls}" style="${style}" onload="this.parentElement.querySelector('.ph-fallback').style.display='none'" onerror="this.style.display='none';this.parentElement.querySelector('.ph-fallback').style.display='flex'" alt=""><div class="${phCls} ph-fallback" style="${style}display:none">${letter}</div></div>`;
   }
   return `<div class="${phCls}" style="${style}">${letter}</div>`;
 }
@@ -388,15 +389,15 @@ function renderInicio(){
   el.innerHTML = `
     <!-- KPIs -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
-      <div class="card" style="padding:14px;text-align:center">
+      <div class="card" style="padding:14px;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="switchTab('leidos')">
         <div style="font-size:26px;font-weight:700;color:var(--accent)">${leidos.length}</div>
         <div style="font-size:11px;color:var(--text2);margin-top:2px">Leídos</div>
       </div>
-      <div class="card" style="padding:14px;text-align:center">
+      <div class="card" style="padding:14px;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="openDrillByYear(${thisYear})">
         <div style="font-size:26px;font-weight:700;color:var(--green)">${thisYearN}</div>
         <div style="font-size:11px;color:var(--text2);margin-top:2px">Este año</div>
       </div>
-      <div class="card" style="padding:14px;text-align:center">
+      <div class="card" style="padding:14px;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="switchTab('estanteria')">
         <div style="font-size:26px;font-weight:700;color:var(--orange)">${estant.length}</div>
         <div style="font-size:11px;color:var(--text2);margin-top:2px">Pendientes</div>
       </div>
@@ -482,20 +483,41 @@ function renderEstanteria(){
     el.innerHTML=`<div class="empty"><div class="empty-icon">📚</div><h2>Estantería vacía</h2><p>Añade libros que quieras leer en el futuro.</p></div>`;
     return;
   }
-  el.innerHTML=`<div class="card">${books.map(b=>`
-    <div class="book-list-item" onclick="openDetail('${b.id}')">
-      ${b.portadaUrl
-        ? `<img src="${escHtml(b.portadaUrl)}" class="list-cover" onerror="this.outerHTML='${coverPHHtml(iniLetter(b.titulo),44,66,'list-cover-ph').replace(/'/g,"\\'")}'" alt="">`
-        : `<div class="list-cover-ph">${escHtml(iniLetter(b.titulo))}</div>`
-      }
-      <div class="list-info">
-        <div class="list-title">${escHtml(b.titulo)}</div>
-        <div class="list-author">${escHtml(b.autor||'')}</div>
-        ${b.paginas?`<div class="list-date">${b.paginas} páginas</div>`:''}
+  // Agrupar por género
+  const byGenre = {};
+  books.forEach(b=>{
+    const g = b.genero || 'Sin clasificar';
+    if(!byGenre[g]) byGenre[g]=[];
+    byGenre[g].push(b);
+  });
+  const genres = Object.keys(byGenre).sort();
+
+  el.innerHTML = `
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px;padding:0 2px">${books.length} libro${books.length>1?'s':''} pendiente${books.length>1?'s':''}</div>
+    ${genres.map(g=>`
+      <div style="margin-bottom:28px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.9px;margin-bottom:12px;padding:0 2px;display:flex;align-items:center;gap:8px">
+          <span>${escHtml(g)}</span>
+          <span style="font-size:10px;background:var(--surface2);padding:2px 7px;border-radius:99px;color:var(--text3);font-weight:500;text-transform:none;letter-spacing:0">${byGenre[g].length}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+          ${byGenre[g].map(b=>`
+            <div onclick="openDetail('${b.id}')" style="cursor:pointer;-webkit-tap-highlight-color:transparent">
+              <div style="position:relative;width:100%;aspect-ratio:2/3;border-radius:10px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.22);margin-bottom:8px">
+                ${b.portadaUrl
+                  ? `<img src="${escHtml(b.portadaUrl)}" style="width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div style="position:absolute;inset:0;background:linear-gradient(135deg,var(--accent),#5856d6);display:none;align-items:center;justify-content:center;font-size:clamp(18px,8vw,28px);font-weight:700;color:#fff">${escHtml(iniLetter(b.titulo))}</div>`
+                  : `<div style="position:absolute;inset:0;background:linear-gradient(135deg,var(--accent),#5856d6);display:flex;align-items:center;justify-content:center;font-size:clamp(18px,8vw,28px);font-weight:700;color:#fff">${escHtml(iniLetter(b.titulo))}</div>`
+                }
+              </div>
+              <div style="font-size:12px;font-weight:600;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--text)">${escHtml(b.titulo)}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${escHtml(b.autor||'')}</div>
+              ${b.paginas?`<div style="font-size:10px;color:var(--text3);margin-top:1px">${b.paginas} pág.</div>`:''}
+            </div>
+          `).join('')}
+        </div>
       </div>
-      <span class="list-chevron">›</span>
-    </div>
-  `).join('')}</div>`;
+    `).join('')}
+  `;
 }
 
 // ══════════════════════════════════════
@@ -588,18 +610,68 @@ function renderStats(){
   all.forEach(b=>{ if(b.paginas&&b.fechaFin){ const ym=b.fechaFin.slice(0,7); pagesByMonth[ym]=(pagesByMonth[ym]||0)+b.paginas } });
   const monthKeys = Object.keys(pagesByMonth).sort().slice(-12);
 
+  // Ritmo: libros/mes promedio (solo meses con lectura en últimos 12m)
+  const recentMonths = Object.entries(byMonth).filter(([ym])=>ym>=new Date(Date.now()-365*864e5).toISOString().slice(0,7));
+  const avgPerMonth = recentMonths.length ? (recentMonths.reduce((s,[,c])=>s+c,0)/recentMonths.length).toFixed(1) : null;
+
   el.innerHTML=`
+    <!-- Fila 1: Total leídos + Este año -->
     <div class="stat-grid">
-      <div class="stat-card"><div class="stat-label">Total leídos</div><div class="stat-value">${all.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Este año (${thisYear})</div><div class="stat-value">${thisYearBooks.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Total páginas</div><div class="stat-value">${totalPages.toLocaleString('es')}</div></div>
-      <div class="stat-card"><div class="stat-label">Media pág./libro</div><div class="stat-value">${avgPages}</div></div>
-      <div class="stat-card"><div class="stat-label">Mejor mes</div><div class="stat-value">${bestMonthCount}</div><div class="stat-sub">${bestMonthLabel}</div></div>
-      <div class="stat-card"><div class="stat-label">Este mes</div><div class="stat-value">${thisMonthCount}</div><div class="stat-sub">libros terminados</div></div>
-      <div class="stat-card"><div class="stat-label">Tiempo medio</div><div class="stat-value">${avgDays!==null?avgDays:'—'}</div><div class="stat-sub">días/libro</div></div>
-      ${maxPageBook?`<div class="stat-card full"><div class="stat-label">Libro más largo</div><div class="stat-value" style="font-size:16px;line-height:1.3">${escHtml(maxPageBook.titulo)}</div><div class="stat-sub">${maxPageBook.paginas} páginas</div></div>`:''}
-      ${topAuthor?`<div class="stat-card full"><div class="stat-label">Autor más leído</div><div class="stat-value" style="font-size:20px">${escHtml(topAuthor[0])}</div><div class="stat-sub">${topAuthor[1]} libro${topAuthor[1]>1?'s':''}</div></div>`:''}
-      ${topGenre?`<div class="stat-card full"><div class="stat-label">Género más leído</div><div class="stat-value" style="font-size:20px">${escHtml(topGenre[0])}</div><div class="stat-sub">${topGenre[1]} libro${topGenre[1]>1?'s':''}</div></div>`:''}
+      <div class="stat-card" style="background:linear-gradient(135deg,#007aff,#5856d6);cursor:pointer" onclick="openDrillByYear(${thisYear})">
+        <div class="stat-label" style="color:rgba(255,255,255,.75)">Total leídos</div>
+        <div class="stat-value" style="color:#fff;font-size:34px">${all.length}</div>
+        <div class="stat-sub" style="color:rgba(255,255,255,.6);font-size:11px;margin-top:4px">libros</div>
+      </div>
+      <div class="stat-card" style="background:linear-gradient(135deg,#34c759,#30b94c);cursor:pointer" onclick="openDrillByYear(${thisYear})">
+        <div class="stat-label" style="color:rgba(255,255,255,.75)">Este año</div>
+        <div class="stat-value" style="color:#fff;font-size:34px">${thisYearBooks.length}</div>
+        <div class="stat-sub" style="color:rgba(255,255,255,.6);font-size:11px;margin-top:4px">en ${thisYear} · toca para ver</div>
+      </div>
+    </div>
+
+    <!-- Fila 2: Páginas + Media -->
+    <div class="stat-grid" style="margin-top:0">
+      <div class="stat-card">
+        <div class="stat-label">Total páginas</div>
+        <div class="stat-value" style="font-size:24px;color:var(--accent)">${totalPages.toLocaleString('es')}</div>
+        <div class="stat-sub" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+          <span style="font-size:11px;color:var(--text3)">Media</span>
+          <span style="font-size:13px;font-weight:600;color:var(--text2);margin-left:4px">${avgPages} pág/libro</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tiempo medio</div>
+        <div class="stat-value" style="font-size:24px;color:#ff9500">${avgDays!==null?avgDays:'—'}</div>
+        <div class="stat-sub" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+          <span style="font-size:11px;color:var(--text3)">días/libro</span>
+          ${avgPerMonth?`<span style="font-size:13px;font-weight:600;color:var(--text2);margin-left:6px">${avgPerMonth}/mes</span>`:''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Fila 3: Mejor mes + Este mes -->
+    <div class="stat-grid" style="margin-top:0">
+      <div class="stat-card">
+        <div class="stat-label">Mejor mes</div>
+        <div class="stat-value" style="font-size:28px;color:#ff3b30">${bestMonthCount}</div>
+        <div class="stat-sub" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+          <span style="font-size:12px;color:var(--text2)">${bestMonthLabel}</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Este mes</div>
+        <div class="stat-value" style="font-size:28px;color:#af52de">${thisMonthCount}</div>
+        <div class="stat-sub" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+          <span style="font-size:12px;color:var(--text2)">libros terminados</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards standalone -->
+    <div class="stat-grid" style="margin-top:0;grid-template-columns:1fr">
+      ${maxPageBook?`<div class="stat-card"><div class="stat-label">Libro más largo</div><div class="stat-value" style="font-size:16px;line-height:1.3">${escHtml(maxPageBook.titulo)}</div><div class="stat-sub">${maxPageBook.paginas} páginas</div></div>`:''}
+      ${topAuthor?`<div class="stat-card" style="cursor:pointer" onclick='openDrill(${JSON.stringify(topAuthor[0])},${JSON.stringify(all.filter(b=>b.autor===topAuthor[0]))})'><div class="stat-label">Autor más leído</div><div class="stat-value" style="font-size:20px">${escHtml(topAuthor[0])}</div><div class="stat-sub">${topAuthor[1]} libro${topAuthor[1]>1?'s':''} · ver todos ›</div></div>`:''}
+      ${topGenre?`<div class="stat-card" style="cursor:pointer" onclick='openDrill(${JSON.stringify(topGenre[0])},${JSON.stringify(all.filter(b=>b.genero===topGenre[0]))})'><div class="stat-label">Género más leído</div><div class="stat-value" style="font-size:20px">${escHtml(topGenre[0])}</div><div class="stat-sub">${topGenre[1]} libro${topGenre[1]>1?'s':''} · ver todos ›</div></div>`:''}
     </div>
 
     ${readYearKeys.length>1?`<div class="card" style="margin-bottom:12px;padding:16px"><div class="stat-label" style="margin-bottom:12px">Libros leídos por año</div><div class="chart-wrap"><canvas id="chartYear"></canvas></div></div>`:''}
@@ -804,6 +876,11 @@ function openDrill(title, books){
 }
 function closeDrill(){
   document.getElementById('drillOverlay')?.remove();
+}
+
+function openDrillByYear(year){
+  const books = loadBooks().filter(b=>b.estado==='leido'&&(b.fechaFin||'').startsWith(year));
+  openDrill('Leídos en '+year, books);
 }
 // ══════════════════════════════════════
 document.getElementById('fabBtn').addEventListener('click',()=>openAddFlow());
@@ -1020,10 +1097,8 @@ async function loadFromGitHub(){
     const bytes = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
     const remote = JSON.parse(new TextDecoder('utf-8').decode(bytes));
     // Merge: remote wins, keep local-only entries not in remote
-    const remoteIds = new Set((remote||[]).map(b=>b.id));
-    const localOnly = loadBooks().filter(b=>!remoteIds.has(b.id));
-    const merged = [...(remote||[]), ...localOnly];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    // Remote es la fuente de verdad — no merge con local para evitar duplicados
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(remote||[]));
     renderTab(currentTab);
     setSyncStatus('ok','Sincronizado · '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}));
   }catch(e){ setSyncStatus('error','Error: '+e.message); }
