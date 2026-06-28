@@ -224,6 +224,23 @@
   /* ── SCROLL FIX ── */
   .tab-content{display:none}
   .tab-content.active{display:block}
+
+  /* ── SEARCH ── */
+  .search-input-wrap{position:relative;margin-bottom:14px}
+  .search-input-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text3);pointer-events:none}
+  .search-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px 10px 36px;font-size:14px;color:var(--text);font-family:inherit;outline:none;transition:border-color .15s}
+  .search-input:focus{border-color:var(--accent)}
+  .search-input::placeholder{color:var(--text3)}
+  .search-result-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .search-result-item:last-child{border-bottom:none}
+  .search-result-cover{width:36px;height:54px;object-fit:cover;border-radius:5px;background:var(--surface2);flex-shrink:0}
+  .search-result-ph{width:36px;height:54px;border-radius:5px;background:linear-gradient(135deg,var(--accent),#5856d6);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+  .search-result-info{flex:1;min-width:0}
+  .search-result-title{font-size:13px;font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}
+  .search-result-author{font-size:11px;color:var(--text2);margin-top:2px}
+  .search-result-meta{font-size:10px;color:var(--text3);margin-top:3px;display:flex;gap:8px;align-items:center}
+  .search-empty{text-align:center;padding:32px 0;color:var(--text3);font-size:13px}
+  .search-count{font-size:11px;color:var(--text3);margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -231,6 +248,9 @@
 <header class="header">
   <h1 id="headerTitle">Inicio</h1>
   <div class="header-actions">
+    <button class="icon-btn" id="searchBtn" aria-label="Buscar" style="width:36px;height:36px;border-radius:50%">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
     <button class="settings-btn" id="settingsBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       <span class="sync-label" id="syncDot">Ajustes</span>
@@ -294,6 +314,22 @@
     <button class="sheet-close" id="detailClose">×</button>
   </div>
   <div class="sheet-body" id="detailSheetBody"></div>
+</div>
+
+<!-- SEARCH SHEET -->
+<div class="sheet" id="searchSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title">Buscar</span>
+    <button class="sheet-close" id="searchClose">×</button>
+  </div>
+  <div class="sheet-body" id="searchBody">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="search-input" id="searchInput" placeholder="Título, autor…" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div id="searchResults"></div>
+  </div>
 </div>
 
 <!-- SETTINGS SHEET -->
@@ -1096,17 +1132,17 @@ function showSheet(name){
 function hideSheet(name){
   document.getElementById(name+'Sheet').classList.remove('show');
   // Hide backdrop only if no other sheet open
-  const anyOpen=['add','detail','settings'].some(n=>document.getElementById(n+'Sheet').classList.contains('show'));
+  const anyOpen=['add','detail','settings','search'].some(n=>document.getElementById(n+'Sheet').classList.contains('show'));
   if(!anyOpen) document.getElementById('backdrop').classList.remove('show');
 }
 
-['add','detail','settings'].forEach(name=>{
+['add','detail','settings','search'].forEach(name=>{
   const closeBtn=document.getElementById(name+'Close');
   if(closeBtn) closeBtn.addEventListener('click',()=>hideSheet(name));
 });
 
 document.getElementById('backdrop').addEventListener('click',()=>{
-  ['add','detail','settings'].forEach(n=>hideSheet(n));
+  ['add','detail','settings','search'].forEach(n=>hideSheet(n));
 });
 
 // ══════════════════════════════════════
@@ -1178,6 +1214,82 @@ async function syncToGitHub(){
     else setSyncStatus('error','Error: '+e.message);
   }
 }
+
+// ══════════════════════════════════════
+//  SEARCH
+// ══════════════════════════════════════
+const STATUS_LABEL = {leido:'Leído',leyendo:'Leyendo',estanteria:'Estantería',abandonado:'Abandonado'};
+
+document.getElementById('searchBtn').addEventListener('click',()=>{
+  showSheet('search');
+  setTimeout(()=>document.getElementById('searchInput').focus(),300);
+});
+
+document.getElementById('searchClose').addEventListener('click',()=>hideSheet('search'));
+
+document.getElementById('searchInput').addEventListener('input', e=>{
+  renderSearchResults(e.target.value.trim());
+});
+
+function renderSearchResults(q){
+  const el = document.getElementById('searchResults');
+  if(!q){ el.innerHTML='<div class="search-empty">Escribe para buscar entre tus libros</div>'; return; }
+  const books = loadBooks();
+  const ql = q.toLowerCase();
+  const results = books.filter(b=>{
+    return (b.titulo||'').toLowerCase().includes(ql)
+      || (b.autor||'').toLowerCase().includes(ql)
+      || (b.notas||'').toLowerCase().includes(ql);
+  }).sort((a,b)=>{
+    // Coincidencias en título primero
+    const at = (a.titulo||'').toLowerCase().includes(ql);
+    const bt = (b.titulo||'').toLowerCase().includes(ql);
+    if(at && !bt) return -1; if(!at && bt) return 1;
+    return (b.fechaFin||b.addedAt||'').localeCompare(a.fechaFin||a.addedAt||'');
+  });
+
+  if(!results.length){
+    el.innerHTML=`<div class="search-empty">Sin resultados para <strong>${escHtml(q)}</strong></div>`;
+    return;
+  }
+
+  const starsHtml = n => n ? `<span style="color:var(--yellow);font-size:10px">${'★'.repeat(n)}</span>` : '';
+  const dateHtml  = b => {
+    if(b.fechaFin)      return `<span>${fmtDate(b.fechaFin)}</span>`;
+    if(b.fechaAbandonado) return `<span>Abandonado ${fmtDate(b.fechaAbandonado)}</span>`;
+    if(b.fechaInicio)   return `<span>Desde ${fmtDate(b.fechaInicio)}</span>`;
+    return '';
+  };
+
+  el.innerHTML=`
+    <div class="search-count">${results.length} resultado${results.length>1?'s':''}</div>
+    <div class="card" style="overflow:hidden">
+      ${results.map(b=>`
+        <div class="search-result-item" onclick="hideSheet('search');setTimeout(()=>openDetail('${b.id}'),200)">
+          ${b.portadaUrl
+            ? `<img src="${escHtml(b.portadaUrl)}" class="search-result-cover" onerror="this.outerHTML='<div class=search-result-ph>${escHtml(iniLetter(b.titulo))}</div>'" alt="">`
+            : `<div class="search-result-ph">${escHtml(iniLetter(b.titulo))}</div>`}
+          <div class="search-result-info">
+            <div class="search-result-title">${escHtml(b.titulo)}</div>
+            <div class="search-result-author">${escHtml(b.autor||'')}</div>
+            <div class="search-result-meta">
+              <span style="color:var(--accent);font-weight:500">${STATUS_LABEL[b.estado]||''}</span>
+              ${starsHtml(b.puntuacion)}
+              ${dateHtml(b)}
+              ${b.paginas?`<span>${b.paginas} pág.</span>`:''}
+            </div>
+          </div>
+          <span style="color:var(--text3);font-size:14px">›</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// Init search sheet close via backdrop
+['search'].forEach(name=>{
+  // Close on backdrop handled in existing backdrop listener below — add search here
+});
 
 // ══════════════════════════════════════
 //  INIT
