@@ -209,6 +209,18 @@
   .step-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .2s}
   .step-dot.active{background:var(--accent)}
 
+  /* ── REREAD BADGE ── */
+  .reread-badge{display:inline-flex;align-items:center;gap:3px;background:var(--orange);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;letter-spacing:.2px}
+  .cover-reread{position:absolute;top:4px;right:4px;background:var(--orange);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:99px}
+
+  /* ── HISTORIAL LECTURAS ── */
+  .lectura-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)}
+  .lectura-row:last-child{border-bottom:none}
+  .lectura-num{font-size:11px;font-weight:700;color:var(--text3);width:18px;flex-shrink:0}
+  .lectura-dates{font-size:12px;color:var(--text2);flex:1}
+  .lectura-stars{font-size:12px;color:var(--yellow)}
+  .lectura-active{font-size:11px;color:var(--orange);font-weight:600}
+
   /* ── SCROLL FIX ── */
   .tab-content{display:none}
   .tab-content.active{display:block}
@@ -442,6 +454,7 @@ function renderInicio(){
       <div onclick="openDetail('${b.id}')" style="cursor:pointer;-webkit-tap-highlight-color:transparent">
         <div style="position:relative">
           ${coverImg(b,null,null,'inicio-cover')}
+          ${b.lecturas&&b.lecturas.length>1?`<span class="cover-reread">↻${b.lecturas.length}</span>`:''}
         </div>
         <div style="font-size:9px;font-weight:500;margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25;color:var(--text)">${escHtml(b.titulo)}</div>
         ${b.puntuacion?`<div style="font-size:8px;color:var(--yellow);margin-top:1px">${'★'.repeat(b.puntuacion)}</div>`:''}
@@ -463,8 +476,15 @@ function renderLeidos(){
   el.innerHTML=`<div class="card">${books.map((b,i)=>`
     <div class="book-list-item" onclick="openDetail('${b.id}')">
       <div style="width:28px;text-align:center;font-size:13px;color:var(--text3);font-weight:600;flex-shrink:0">${i+1}</div>
+      ${b.portadaUrl
+        ? `<img src="${escHtml(b.portadaUrl)}" class="list-cover" alt="">`
+        : `<div class="list-cover-ph">${escHtml(iniLetter(b.titulo))}</div>`
+      }
       <div class="list-info">
-        <div class="list-title">${escHtml(b.titulo)}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow:hidden">
+          <div class="list-title" style="flex-shrink:1;min-width:0">${escHtml(b.titulo)}</div>
+          ${b.lecturas&&b.lecturas.length>1?`<span class="reread-badge" style="flex-shrink:0">↻${b.lecturas.length}</span>`:''}
+        </div>
         <div class="list-author">${escHtml(b.autor||'')}</div>
         <div style="display:flex;gap:10px;align-items:center;margin-top:3px">
           ${b.puntuacion?`<span style="font-size:11px;color:var(--yellow)">${'★'.repeat(b.puntuacion)}</span>`:''}
@@ -752,20 +772,40 @@ function openDetail(id){
     coverHtml=`<div class="detail-cover-ph">${escHtml(iniLetter(b.titulo))}</div>`;
   }
 
+  // Build lecturas history HTML
+  const lecturas = b.lecturas && b.lecturas.length > 1 ? b.lecturas : null;
+  const lecturasHtml = lecturas ? `
+    <div style="margin-bottom:16px">
+      <div class="stat-label" style="margin-bottom:6px">Historial de lecturas</div>
+      <div class="card" style="overflow:hidden">
+        ${lecturas.map((l,i)=>{
+          const d = l.fechaInicio&&l.fechaFin ? daysBetween(l.fechaInicio,l.fechaFin) : null;
+          const active = !l.fechaFin;
+          return `<div class="lectura-row">
+            <span class="lectura-num">${i+1}ª</span>
+            <span class="lectura-dates">${fmtDate(l.fechaInicio)}${l.fechaFin?' → '+fmtDate(l.fechaFin):''}</span>
+            ${active ? `<span class="lectura-active">Leyendo</span>`
+              : l.puntuacion ? `<span class="lectura-stars">${'★'.repeat(l.puntuacion)}</span>` : `<span style="font-size:11px;color:var(--text3)">—</span>`}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
   body.innerHTML=`
     <div class="detail-cover-wrap">${coverHtml}</div>
     <div class="detail-title">${escHtml(b.titulo)}</div>
     <div class="detail-author">${escHtml(b.autor||'')}</div>
-    ${b.puntuacion?`<div class="stars-display">${starsStr(b.puntuacion)}</div>`:''}
+    ${b.puntuacion&&!lecturas?`<div class="stars-display">${starsStr(b.puntuacion)}</div>`:''}
     <div class="detail-grid">
-      ${b.fechaInicio?`<div class="detail-stat"><div class="detail-stat-label">Inicio</div><div class="detail-stat-value" style="font-size:14px">${fmtDate(b.fechaInicio)}</div></div>`:''}
-      ${b.fechaFin?`<div class="detail-stat"><div class="detail-stat-label">Fin</div><div class="detail-stat-value" style="font-size:14px">${fmtDate(b.fechaFin)}</div></div>`:''}
+      ${!lecturas&&b.fechaInicio?`<div class="detail-stat"><div class="detail-stat-label">Inicio</div><div class="detail-stat-value" style="font-size:14px">${fmtDate(b.fechaInicio)}</div></div>`:''}
+      ${!lecturas&&b.fechaFin?`<div class="detail-stat"><div class="detail-stat-label">Fin</div><div class="detail-stat-value" style="font-size:14px">${fmtDate(b.fechaFin)}</div></div>`:''}
       ${b.fechaAbandonado?`<div class="detail-stat"><div class="detail-stat-label">Abandonado</div><div class="detail-stat-value" style="font-size:14px">${fmtDate(b.fechaAbandonado)}</div></div>`:''}
-      ${days!==null?`<div class="detail-stat"><div class="detail-stat-label">Días de lectura</div><div class="detail-stat-value">${days}</div></div>`:''}
+      ${!lecturas&&days!==null?`<div class="detail-stat"><div class="detail-stat-label">Días de lectura</div><div class="detail-stat-value">${days}</div></div>`:''}
       ${b.paginas?`<div class="detail-stat"><div class="detail-stat-label">Páginas</div><div class="detail-stat-value">${b.paginas}</div></div>`:''}
-      ${ppd?`<div class="detail-stat"><div class="detail-stat-label">Pág./día</div><div class="detail-stat-value">${ppd}</div></div>`:''}
+      ${!lecturas&&ppd?`<div class="detail-stat"><div class="detail-stat-label">Pág./día</div><div class="detail-stat-value">${ppd}</div></div>`:''}
       ${b.genero?`<div class="detail-stat"><div class="detail-stat-label">Género</div><div class="detail-stat-value" style="font-size:14px">${escHtml(b.genero)}</div></div>`:''}
     </div>
+    ${lecturasHtml}
     ${b.notas?`<div class="detail-notes"><div class="stat-label" style="margin-bottom:6px">Notas</div><p>${escHtml(b.notas)}</p></div>`:''}
     ${b.estado==='estanteria'?`<button class="btn btn-primary btn-full" onclick="startReading('${b.id}')">📖 Empezar a leer</button>`:''}
     <button class="btn btn-ghost btn-full" style="margin-top:8px;color:var(--red)" onclick="deleteBook('${b.id}')">Eliminar libro</button>
@@ -825,7 +865,13 @@ function finishBook(id){
     });
   });
   document.getElementById('confirmFinish').addEventListener('click',()=>{
-    b.estado='leido'; b.fechaFin=today(); if(rating) b.puntuacion=rating;
+    const fin = today();
+    b.estado='leido'; b.fechaFin=fin; if(rating) b.puntuacion=rating;
+    // Si tiene lecturas[], actualizar la entrada activa (sin fechaFin)
+    if(b.lecturas && b.lecturas.length){
+      const active = b.lecturas.find(l=>!l.fechaFin);
+      if(active){ active.fechaFin=fin; if(rating) active.puntuacion=rating; }
+    }
     saveBooks(books);
     hideSheet('detail');
     toast('🎉 ¡Libro terminado!');
