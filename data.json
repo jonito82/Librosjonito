@@ -8170,5 +8170,20 @@
     "addedAt": "2020-04-09",
     "anoPublicacion": 2018,
     "isbn13": "9788466664417"
+  },
+  {
+    "id": "mr404nk77450",
+    "titulo": "La búsqueda del asesino",
+    "autor": "Robin Hobb",
+    "fechaInicio": "2026-07-02",
+    "fechaFin": null,
+    "fechaAbandonado": null,
+    "puntuacion": null,
+    "paginas": null,
+    "genero": null,
+    "estado": "leyendo",
+    "notas": null,
+    "portadaUrl": null,
+    "addedAt": "2026-07-02"
   }
 ]
