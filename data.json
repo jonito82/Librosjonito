@@ -1177,12 +1177,12 @@
     "titulo": "La psicología del dinero",
     "autor": "Morgan Housel",
     "fechaInicio": "2025-01-06",
-    "fechaFin": "2025-05-29",
+    "fechaFin": "2026-07-05",
     "fechaAbandonado": null,
     "puntuacion": 4,
     "paginas": 312,
     "genero": null,
-    "estado": "leyendo",
+    "estado": "leido",
     "notas": null,
     "portadaUrl": "https://covers.openlibrary.org/b/isbn/9789584299680-M.jpg",
     "addedAt": "2025-01-06",
@@ -1196,7 +1196,7 @@
       },
       {
         "fechaInicio": "2026-06-28",
-        "fechaFin": null,
+        "fechaFin": "2026-07-05",
         "puntuacion": null
       }
     ]
